@@ -19,12 +19,21 @@ def get_client_rect(hwnd):
     return rect[2] - rect[0], rect[3] - rect[1]
 
 
-def set_window_pos(child_hwnd: int, width: int, height: int, top: int):
+def set_window_pos(child_hwnd: int, is_vertical: bool):
+    width = 400
+    height = 702
+    top = 0
+
+    if not is_vertical:
+        width = 702
+        height = width
+        top = 50
+
     win32gui.SetWindowPos(child_hwnd, None, 0, top, width, height, win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
 
 
-def embed_window(parent_hwnd: int, child_hwnd: int, width=400, height=702, top=0):
+def embed_window(parent_hwnd: int, child_hwnd: int, is_vertical: bool):
     win32gui.SetParent(child_hwnd, parent_hwnd)
     win32gui.SetWindowLong(child_hwnd, win32con.GWL_STYLE, win32con.WS_VISIBLE | win32con.WS_CHILD)
 
-    set_window_pos(child_hwnd, width, height, top)
+    set_window_pos(child_hwnd, is_vertical)

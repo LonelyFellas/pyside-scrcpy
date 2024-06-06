@@ -3,15 +3,14 @@ import subprocess
 import sys
 import time
 
-import win32gui
-from PySide6.QtCore import QSize, Qt, QTimer, QEvent
-from PySide6.QtGui import QIcon, QCursor, QKeySequence, QKeyEvent
-from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QSizePolicy
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QCursor, QKeyEvent
+from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton
 
-from views import ApkStoreSpace, DialogScreenShot, find_window_by_title, embed_window, handle_startupinfo
+from views import ApkStoreSpace, ProxySpace, DialogScreenShot, find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
-    WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V
+    WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH
 from views.win_event import desktop_to_android_keycode
 
 # 获取应用程序运行目录或打包后的临时目录
@@ -29,16 +28,20 @@ class MainWindow(QMainWindow):
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
         self.app_store_space = None
+        self.proxy_space = None
         self.setWindowTitle(scrcpy_title)
         self.update_ui()
         self.app_store_expend = False
+        self.proxy_expend = False
 
+    # 监听键盘的事件
     def keyPressEvent(self, event: QKeyEvent):
         keycode = event.key()
         modifiers = QApplication.keyboardModifiers()
         shift_pressed = modifiers & Qt.ShiftModifier
         self.send_key_to_android(keycode, shift_pressed)
 
+    # 对键盘的输入发送abd的指令
     def send_key_to_android(self, keycode, shift_pressed):
         # A mapping of PySide6 keycodes to Android keycodes
         key_mapping = {
@@ -144,14 +147,7 @@ class MainWindow(QMainWindow):
         # 对spk_store展开状态进行切换赋值
         self.app_store_expend = not self.app_store_expend
 
-        # 以下几行是对spk_store组件展开或者不展开窗口大小的计算
-        size = self.size()
-        height = size.height()
-        width_window = self.config_fn().get('width_window')
-        height_window = self.config_fn().get('height_window')
-        app_store_width_window = width_window + (APP_STORE_WIDTH if self.app_store_expend else 0)
-        height_apk = height if self.is_vertical_screen else (702 if self.app_store_expend else height_window)
-        self.setFixedSize(app_store_width_window, height_apk)
+        width_window = self.expend_window_size(APP_STORE_WIDTH, self.app_store_expend)
 
         # 如果是不展开的，限免的ApkStoreSpace将不在进行渲染，直接return
         if not self.app_store_expend:
@@ -230,7 +226,7 @@ class MainWindow(QMainWindow):
             "x": speed_x,
             "y": speed_y,
             "icon_path": os.path.join(application_path, 'images', 'speed.png'),
-            "on_click": None
+            "on_click": self.create_proxy_view
         }, {
             "title": "更多",
             "x": more_x,
@@ -278,7 +274,7 @@ class MainWindow(QMainWindow):
             button.clicked.connect(on_click)
             button.setCursor(QCursor(Qt.PointingHandCursor))
             self.buttons.append(button)
-            if title == '上传' or title == '更多' or title == "代理":
+            if title == '上传' or title == '更多':
                 button.setEnabled(False)
                 button.setCursor(QCursor(Qt.ForbiddenCursor))
 
@@ -302,8 +298,7 @@ class MainWindow(QMainWindow):
         else:
             self.rotation_number = int(query_scrcpy_system_size())
             self.is_vertical_screen = self.rotation_number == 0 or self.rotation_number == 2
-            embed_window(window.winId(), scrcpy_hwnd, width=(400 if self.is_vertical_screen else 702),
-                         height=(702 if self.is_vertical_screen else 400), top=0 if self.is_vertical_screen else 50)
+            embed_window(window.winId(), scrcpy_hwnd, self.is_vertical_screen)
             self.reset_window()
 
     def config_fn(self):
@@ -343,17 +338,61 @@ class MainWindow(QMainWindow):
         command = ["adb", '-s', self.scrcpy_addr, "shell", "input", 'keyevent', keycode]
         subprocess.run(command, **handle_startupinfo())
 
-    def reset_window(self):
-        # 清空所有button的视图
-        for button in self.buttons:
-            button.deleteLater()
-        # 旋转的时候关闭所有的展开view组件
+    def close_app_store_space(self):
+        """
+        旋转的时候关闭应用商店展开的空间
+        :return:
+        """
         self.app_store_expend = False
         if self.app_store_space is not None:
             self.app_store_space.hide()
+
+    def close_proxy_space(self):
+        """
+        旋转的时候关闭代理展开的空间
+        :return:
+        """
+        self.proxy_expend = False
+        if self.proxy_space is not None:
+            self.proxy_space.hide()
+
+    def reset_window(self):
+        """
+        清空所有视图，并回到起始窗口
+        :return:
+        """
+        for button in self.buttons:
+            button.deleteLater()
+        self.close_app_store_space()
         self.buttons.clear()
         self.update_ui()
         self.show()
+
+    def expend_window_size(self, expend_width=0, expend_bool=False):
+        # 以下几行是对spk_store组件展开或者不展开窗口大小的计算
+        size = self.size()
+        height = size.height()
+        width_window = self.config_fn().get('width_window')
+        height_window = self.config_fn().get('height_window')
+        app_store_width_window = width_window + (expend_width if expend_bool else 0)
+        height_apk = height if self.is_vertical_screen else (702 if expend_bool else height_window)
+        self.setFixedSize(app_store_width_window, height_apk)
+
+        return width_window
+
+    def create_proxy_view(self):
+        """
+        点击代理按钮，显示代理的view
+        :return:
+        """
+        # 关闭其他展开的扩展的视图
+        self.close_app_store_space()
+
+        self.proxy_expend = not self.proxy_expend
+        width_window = self.expend_window_size(PROXY_WIDTH, self.proxy_expend)
+        # 设置小部件的布局
+        self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token)
+        self.proxy_space.show()
 
 
 def query_scrcpy_system_size():
@@ -365,7 +404,11 @@ def query_scrcpy_system_size():
         ['adb', '-s', scrcpy_addr, 'shell', 'settings', 'get', 'system', 'user_rotation'],
         creationflags=subprocess.CREATE_NO_WINDOW, shell=True,
     )
-    return output_size.decode('utf-8').strip()
+    try:
+        return output_size.decode('utf-8').strip()
+    except Exception as e:
+        print(f'Error: {e}')
+        return '1'
 
 
 def open_scrcpy() -> int:
@@ -401,7 +444,6 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
 
-    embed_window(window.winId(), scrcpy_hwnd, width=(400 if is_vertical_screen else 702),
-                 height=(702 if is_vertical_screen else 400), top=0 if is_vertical_screen else 50)
+    embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()

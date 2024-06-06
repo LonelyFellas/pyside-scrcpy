@@ -8,3 +8,4 @@ WIDTH_BUTTON = 50  # 操作栏按钮的宽度
 HEIGHT_BUTTON = 30  # 操作栏按钮的高度
 ICON_SIZE = 24  # 操作栏按钮的图标尺寸
 APP_STORE_WIDTH = 450  # app_store 容器大小
+PROXY_WIDTH = 450  # app_store 容器大小
