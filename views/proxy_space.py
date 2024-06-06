@@ -1,23 +1,29 @@
 import os
+import time
 
-from PySide6.QtCore import QSize, Slot
+from PySide6.QtCore import QSize, Slot, QThread
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
     QHeaderView, QVBoxLayout
 
 from views.config import PROXY_WIDTH
+from views.spin_label import SpinFrame
 from views.util import view_cursor
+from views.worker_thread import WorkerThread
 
 
 class ProxySpace(QFrame):
-    def __init__(self, parent=None, width_window=0, application_path='', token=''):
+    def __init__(self, parent=None, width_window=0, application_path='', token='', env_id=2):
         super().__init__(parent)
+
         self.setGeometry(width_window, 10, PROXY_WIDTH - 10, parent.size().height() - 20)
         self.token = token
+        self.env_id = env_id
         self.application_path = application_path
 
         self.top_layout = None
         self.bottom_layout = None
+        self.done_thread = 0
 
         self.setObjectName("proxy_space_frame")
         self.setStyleSheet("#proxy_space_frame { border: 1px solid gray; background-color: white; }")
@@ -105,10 +111,33 @@ class ProxySpace(QFrame):
             }
             
         """)
+        self.spin_frame = SpinFrame(self)
+        self.load_data()
 
-    # @Slot()
-    # def load_data(self):
-    #     self.
+    @Slot()
+    def load_data(self):
+        self.thread_env_detail = WorkerThread(token=self.token, url='env/getCurrentVpc', data={'envId': self.env_id},
+                                              option={"method": 'post'})
+        self.thread_vpc_list = WorkerThread(token=self.token, url='vpc/getAll')
+        self.thread_env_detail.data_fetched.connect(lambda data: self.on_data_fetched(data, 'env_detail'))
+        self.thread_vpc_list.data_fetched.connect(lambda data: self.on_data_fetched(data, 'vpc_list'))
+        self.thread_vpc_list.start()
+        self.thread_env_detail.start()
+
+    @Slot(object, str)
+    def on_data_fetched(self, data, type):
+        self.done_thread += 1
+
+        if type == 'env_detail':
+            self.env_detail_data = data
+        if type == 'vpc_list':
+            self.vpc_list_data = data
+
+        if self.done_thread == 2:
+            self.spin_frame.pause_move()
+
+
+
     def create_top_widget(self):
         self.top_layout = QHBoxLayout()
         top_left_layout = QVBoxLayout()

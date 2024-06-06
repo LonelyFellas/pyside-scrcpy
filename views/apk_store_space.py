@@ -7,7 +7,7 @@ from PySide6.QtCore import Slot
 from PySide6.QtGui import QCursor, Qt, QPalette, QColor
 from PySide6.QtWidgets import QRadioButton, QButtonGroup, QFrame, QListWidget, QListWidgetItem, QLabel, QVBoxLayout
 
-from views.spin_label import SpinLabel
+from views.spin_label import SpinFrame
 from views.app_store_item import AppItem
 from views.worker_thread import WorkerThread
 from views.config import APP_STORE_WIDTH
@@ -62,7 +62,7 @@ class ApkStoreSpace(QFrame):
         self.app_list2 = QListWidget(self)
         self.app_list2.setGeometry(0, 40, APP_STORE_WIDTH - 10, self.size().height() - 40)
 
-        self.spin_label = SpinLabel(self)
+        self.spin_frame = SpinFrame(self)
         self.load_data()
         items2 = [
             (os.path.join(self.application_path, "images", "apk-icon.webp"), "Petco", "8.6.3"),
@@ -111,7 +111,7 @@ class ApkStoreSpace(QFrame):
             item1.setSizeHint(widget.sizeHint())
             self.app_list1.setItemWidget(item1, widget)
 
-        self.spin_label.pause_movie()
+        self.spin_frame.pause_move()
 
     def filter_apk_list(self, params_list):
         """ 过滤所有apk文件 """
