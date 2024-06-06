@@ -44,12 +44,10 @@ class ApkStoreSpace(QFrame):
     def __init__(self, parent=None, width_window=0, application_path='./', token=''):
         super().__init__(parent)
         self.application_path = application_path
+        self.token = token
         self.scrcpy_addr = parent.scrcpy_addr
         self.setGeometry(width_window, 10, APP_STORE_WIDTH - 10, parent.size().height() - 20)
-        self.token = token
-        self.application_path = application_path
 
-        # 设置背景颜色
         palette = self.palette()
         self.setPalette(palette)
 
@@ -219,7 +217,6 @@ class ApkStoreSpace(QFrame):
 
         packages = [line.split("=")[-1].strip() for line in stdout.splitlines()]
         paths = {line.split("=")[-1].strip(): line.split(":")[1].split("=")[0] for line in stdout.splitlines()}
-        print(packages)
         return packages, paths
 
     def get_app_name(self, package_name):
