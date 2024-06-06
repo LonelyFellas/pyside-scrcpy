@@ -7,11 +7,14 @@ from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton
 
-from views import ApkStoreSpace, ProxySpace, DialogScreenShot, find_window_by_title, embed_window, handle_startupinfo
+from views import find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
     WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH
 from views.util import images_path
+from views.apk_store_space import ApkStoreSpace
+from views.proxy_space import ProxySpace
+from views.dialog_screen_shot import DialogScreenShot
 from views.win_event import desktop_to_android_keycode
 
 # 获取应用程序运行目录或打包后的临时目录
@@ -392,7 +395,7 @@ class MainWindow(QMainWindow):
         self.proxy_expend = not self.proxy_expend
         width_window = self.expend_window_size(PROXY_WIDTH, self.proxy_expend)
         # 设置小部件的布局
-        self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token)
+        self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token, env_id=env_id)
         self.proxy_space.show()
 
 
@@ -433,9 +436,7 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    scrcpy_title = sys.argv[1]
-    scrcpy_addr = sys.argv[2]
-    token = sys.argv[3]
+    _,scrcpy_title, scrcpy_addr, token, env_id = sys.argv
     scrcpy_size_num = int(query_scrcpy_system_size())
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
     scrcpy_hwnd = open_scrcpy()
