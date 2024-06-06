@@ -1,6 +1,6 @@
 import os
 
-from PySide6.QtCore import QSize
+from PySide6.QtCore import QSize, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
     QHeaderView, QVBoxLayout
@@ -10,7 +10,6 @@ from views.util import view_cursor
 
 
 class ProxySpace(QFrame):
-
     def __init__(self, parent=None, width_window=0, application_path='', token=''):
         super().__init__(parent)
         self.setGeometry(width_window, 10, PROXY_WIDTH - 10, parent.size().height() - 20)
@@ -107,6 +106,9 @@ class ProxySpace(QFrame):
             
         """)
 
+    # @Slot()
+    # def load_data(self):
+    #     self.
     def create_top_widget(self):
         self.top_layout = QHBoxLayout()
         top_left_layout = QVBoxLayout()

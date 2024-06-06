@@ -11,6 +11,7 @@ from views import ApkStoreSpace, ProxySpace, DialogScreenShot, find_window_by_ti
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
     WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH
+from views.util import images_path
 from views.win_event import desktop_to_android_keycode
 
 # 获取应用程序运行目录或打包后的临时目录
@@ -195,67 +196,67 @@ class MainWindow(QMainWindow):
             "title": "旋转",
             "x": rotary_x,
             "y": rotary_y,
-            "icon_path": os.path.join(application_path, 'images', 'rotary.png'),
+            "icon_path": images_path(application_path, 'rotary.png'),
             "on_click": self.on_rotate_screen,
         }, {
             "title": "截屏",
             "x": shot_x,
             "y": shot_y,
-            "icon_path": os.path.join(application_path, 'images', 'screen-shot.png'),
+            "icon_path": images_path(application_path, 'screen-shot.png'),
             "on_click": self.on_screen_shop
         }, {
             "title": "上传",
             "x": upload_x,
             "y": upload_y,
-            "icon_path": os.path.join(application_path, 'images', 'file-upload.png'),
+            "icon_path": images_path(application_path, 'file-upload.png'),
             "on_click": None
         }, {
             "title": "音量",
             "x": v_up_x,
             "y": v_up_y,
-            "icon_path": os.path.join(application_path, 'images', 'volume-up.png'),
+            "icon_path": images_path(application_path, 'volume-up.png'),
             "on_click": lambda: self.on_keyevent('KEYCODE_VOLUME_UP')
         }, {
             "title": "音量",
             "x": v_down_x,
             "y": v_down_y,
-            "icon_path": os.path.join(application_path, 'images', 'volume-down.png'),
+            "icon_path": images_path(application_path, 'volume-down.png'),
             "on_click": lambda: self.on_keyevent('KEYCODE_VOLUME_DOWN')
         }, {
             "title": "代理",
             "x": speed_x,
             "y": speed_y,
-            "icon_path": os.path.join(application_path, 'images', 'speed.png'),
+            "icon_path": images_path(application_path, 'speed.png'),
             "on_click": self.create_proxy_view
         }, {
             "title": "更多",
             "x": more_x,
             "y": more_y,
-            "icon_path": os.path.join(application_path, 'images', 'more.png'),
+            "icon_path": images_path(application_path, 'more.png'),
             "on_click": None
         }, {
             "title": "",
             "x": back_x,
             "y": back_y,
-            "icon_path": os.path.join(application_path, 'images', 'latest-up.png'),
+            "icon_path": images_path(application_path, 'latest-up.png'),
             "on_click": lambda: self.on_keyevent('4')
         }, {
             "title": "",
             "x": main_x,
             "y": main_y,
-            "icon_path": os.path.join(application_path, 'images', 'main-menu.png'),
+            "icon_path": images_path(application_path, 'main-menu.png'),
             "on_click": lambda: self.on_keyevent('3')
         }, {
             "title": "",
             "x": all_x,
             "y": all_y,
-            "icon_path": os.path.join(application_path, 'images', 'all-process.png'),
+            "icon_path": images_path(application_path, 'all-process.png'),
             "on_click": lambda: self.on_keyevent('187')
         }, {
             "title": "应用",
             "x": app_x,
             "y": app_y,
-            "icon_path": os.path.join(application_path, 'images', 'app.png'),
+            "icon_path": images_path(application_path, 'app.png'),
             "on_click": self.on_apk_store
         }]
 
