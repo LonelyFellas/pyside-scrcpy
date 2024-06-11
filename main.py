@@ -23,7 +23,6 @@ if hasattr(sys, '_MEIPASS'):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -148,6 +147,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def on_apk_store(self):
+        self.close_proxy_space()
         # 对spk_store展开状态进行切换赋值
         self.app_store_expend = not self.app_store_expend
 
@@ -161,6 +161,7 @@ class MainWindow(QMainWindow):
         # 设置小部件的布局
         self.app_store_space = ApkStoreSpace(self, width_window, application_path, token)
         self.app_store_space.show()
+        self.app_store_space.raise_()
 
     def update_ui(self):
         (width_window,
@@ -351,6 +352,7 @@ class MainWindow(QMainWindow):
         if self.app_store_space is not None:
             self.app_store_space.hide()
 
+
     def close_proxy_space(self):
         """
         旋转的时候关闭代理展开的空间
@@ -359,6 +361,7 @@ class MainWindow(QMainWindow):
         self.proxy_expend = False
         if self.proxy_space is not None:
             self.proxy_space.hide()
+            self.proxy_space.super_hide()
 
     def reset_window(self):
         """
@@ -368,6 +371,7 @@ class MainWindow(QMainWindow):
         for button in self.buttons:
             button.deleteLater()
         self.close_app_store_space()
+        self.close_proxy_space()
         self.buttons.clear()
         self.update_ui()
         self.show()
@@ -416,21 +420,21 @@ def query_scrcpy_system_size():
 
 
 def open_scrcpy() -> int:
-    """
-    start a window of scrcpy
-    打开scrcpy第三方窗口
-    :return: int
-    """
-    scrcpy_process = subprocess.Popen(
-        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-        **handle_startupinfo())
-    time.sleep(1)
+    # """
+    # start a window of scrcpy
+    # 打开scrcpy第三方窗口
+    # :return: int
+    # """
+    # scrcpy_process = subprocess.Popen(
+    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+    #     **handle_startupinfo())
+    # time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        scrcpy_process.terminate()
+        # scrcpy_process.terminate()
         exit(1)
     return hwnd
 

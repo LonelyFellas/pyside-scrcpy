@@ -36,6 +36,7 @@ class WorkerThread(QThread):
             response = requests.post(self.url, headers=headers, data=data)
         if response.status_code == 200:
             res_list = response.json().get('data')
-
+        else:
+            print(response.text)
         print(res_list)
         self.data_fetched.emit(res_list, self)  # 发射信号传递数据

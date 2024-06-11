@@ -1,3 +1,15 @@
 .venv
 dist
 build
+/venv/d
+/venv/
+/venv
+# Ignore virtual environment folder
+venv/
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+# Ignore other common files and folders
+.DS_Store
+.idea/
+.vscode/
