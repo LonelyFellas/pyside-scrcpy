@@ -3,14 +3,15 @@ import subprocess
 import sys
 import time
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, QPoint, QEvent
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
-from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton
+from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout
 
 from views import find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
-    WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH
+    WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH, UPLOAD_WIDTH
+from views.upload_space import UploadSpace
 from views.util import images_path
 from views.apk_store_space import ApkStoreSpace
 from views.proxy_space import ProxySpace
@@ -23,7 +24,11 @@ if hasattr(sys, '_MEIPASS'):
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
+
 class MainWindow(QMainWindow):
+    expend_attrs = ['app_store_expend', 'proxy_expend', 'upload_expend']
+    space_attrs = ['app_store_space', 'proxy_space', 'upload_space.py']
+
     def __init__(self):
         super().__init__()
         self.scrcpy_addr = scrcpy_addr
@@ -32,10 +37,12 @@ class MainWindow(QMainWindow):
         self.rotation_number = scrcpy_size_num
         self.app_store_space = None
         self.proxy_space = None
+        self.upload_space = None
         self.setWindowTitle(scrcpy_title)
         self.update_ui()
         self.app_store_expend = False
         self.proxy_expend = False
+        self.upload_expend = False
 
     # 监听键盘的事件
     def keyPressEvent(self, event: QKeyEvent):
@@ -146,23 +153,6 @@ class MainWindow(QMainWindow):
         dialog = DialogScreenShot(self, scrcpy_addr)
         dialog.exec()
 
-    def on_apk_store(self):
-        self.close_proxy_space()
-        # 对spk_store展开状态进行切换赋值
-        self.app_store_expend = not self.app_store_expend
-
-        width_window = self.expend_window_size(APP_STORE_WIDTH, self.app_store_expend)
-
-        # 如果是不展开的，限免的ApkStoreSpace将不在进行渲染，直接return
-        if not self.app_store_expend:
-            self.app_store_space.hide()
-            return
-
-        # 设置小部件的布局
-        self.app_store_space = ApkStoreSpace(self, width_window, application_path, token)
-        self.app_store_space.show()
-        self.app_store_space.raise_()
-
     def update_ui(self):
         (width_window,
          height_window,
@@ -213,7 +203,7 @@ class MainWindow(QMainWindow):
             "x": upload_x,
             "y": upload_y,
             "icon_path": images_path(application_path, 'file-upload.png'),
-            "on_click": None
+            "on_click": self.create_upload_files
         }, {
             "title": "音量",
             "x": v_up_x,
@@ -279,9 +269,11 @@ class MainWindow(QMainWindow):
             button.clicked.connect(on_click)
             button.setCursor(QCursor(Qt.PointingHandCursor))
             self.buttons.append(button)
-            if title == '上传' or title == '更多':
+            if title == '更多' or title == '应用':
                 button.setEnabled(False)
                 button.setCursor(QCursor(Qt.ForbiddenCursor))
+
+        self.create_upload_files()
 
     def on_rotate_screen(self):
         startupinfo = subprocess.STARTUPINFO()
@@ -343,25 +335,23 @@ class MainWindow(QMainWindow):
         command = ["adb", '-s', self.scrcpy_addr, "shell", "input", 'keyevent', keycode]
         subprocess.run(command, **handle_startupinfo())
 
-    def close_app_store_space(self):
-        """
-        旋转的时候关闭应用商店展开的空间
-        :return:
-        """
-        self.app_store_expend = False
-        if self.app_store_space is not None:
-            self.app_store_space.hide()
+    def other_close_space(self, expend_attr, space_attr):
+        # Exclude the specified expend_attr and space_attr
+        other_expend_attrs = [attr for attr in self.expend_attrs if attr != expend_attr]
+        other_space_attrs = [attr for attr in self.space_attrs if attr != space_attr]
 
+        self.close_space(other_expend_attrs, other_space_attrs)
 
-    def close_proxy_space(self):
-        """
-        旋转的时候关闭代理展开的空间
-        :return:
-        """
-        self.proxy_expend = False
-        if self.proxy_space is not None:
-            self.proxy_space.hide()
-            self.proxy_space.super_hide()
+        setattr(self, expend_attr, not getattr(self, expend_attr, False))
+
+    def close_space(self, e_attrs, s_attrs):
+        for attr in e_attrs:
+            setattr(self, attr, False)
+
+        for attr in s_attrs:
+            space = getattr(self, attr, None)
+            if space is not None:
+                space.hide()
 
     def reset_window(self):
         """
@@ -370,8 +360,8 @@ class MainWindow(QMainWindow):
         """
         for button in self.buttons:
             button.deleteLater()
-        self.close_app_store_space()
-        self.close_proxy_space()
+
+        self.close_space(self.expend_attrs, self.space_attrs)
         self.buttons.clear()
         self.update_ui()
         self.show()
@@ -388,19 +378,50 @@ class MainWindow(QMainWindow):
 
         return width_window
 
+    def on_apk_store(self):
+        self.other_close_space('app_store_expend', 'app_store_space')
+
+        width_window = self.expend_window_size(APP_STORE_WIDTH, self.app_store_expend)
+
+        # 如果是不展开的，限免的ApkStoreSpace将不在进行渲染，直接return
+        if not self.app_store_expend and self.app_store_space is not None:
+            self.app_store_space.hide()
+            return
+
+        # 设置小部件的布局
+        self.app_store_space = ApkStoreSpace(self, width_window, application_path, token)
+        self.app_store_space.show()
+        self.app_store_space.raise_()
+
     def create_proxy_view(self):
         """
         点击代理按钮，显示代理的view
         :return:
         """
         # 关闭其他展开的扩展的视图
-        self.close_app_store_space()
+        self.layout = QVBoxLayout(self)
+        self.other_close_space('proxy_expend', 'proxy_space')
 
-        self.proxy_expend = not self.proxy_expend
         width_window = self.expend_window_size(PROXY_WIDTH, self.proxy_expend)
         # 设置小部件的布局
         self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token, env_id=env_id)
+        self.layout.addWidget(self.proxy_space)
         self.proxy_space.show()
+
+    def create_upload_files(self):
+        """
+        点击上传文件按钮
+        :return:
+        """
+        self.other_close_space('upload_expend', 'upload_space')
+        width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
+        self.upload_space = UploadSpace(self, width_window, application_path=application_path, token=token,
+                                        env_id=env_id)
+        self.upload_space.show()
+
+    def open_upload_space_history_dialog(self):
+        return self.upload_space and hasattr(self.upload_space,
+                                             'history_dialog') and self.upload_space.history_dialog.isVisible()
 
 
 def query_scrcpy_system_size():
@@ -440,16 +461,20 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    _,scrcpy_title, scrcpy_addr, token, env_id = sys.argv
-    scrcpy_size_num = int(query_scrcpy_system_size())
-    is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
-    scrcpy_hwnd = open_scrcpy()
+    _, scrcpy_title, scrcpy_addr, token, env_id, env = sys.argv
+    # scrcpy_size_num = int(query_scrcpy_system_size())
+    scrcpy_size_num = 1
+    # is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    is_vertical_screen = True
+    if env == 'pro':
+        scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     window = MainWindow()
     window.show()
 
-    embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
+    if env == 'pro':
+        embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()
