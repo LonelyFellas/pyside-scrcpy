@@ -52,12 +52,12 @@ class UploadSpace(QFrame):
         self.history_upload_btn.setIconSize(QSize(30, 30))
         self.history_upload_btn.setFixedSize(50, 25)
         header_right_layout.addWidget(self.history_upload_btn)
-        info_btn = QPushButton("提示")
-        info_btn.clicked.connect(self.open_upload_info)
-        info_btn.setIcon(QIcon(images_path(self.application_path, 'info.png')))
-        info_btn.setIconSize(QSize(30, 30))
-        info_btn.setFixedSize(50, 25)
-        header_right_layout.addWidget(info_btn)
+        self.info_btn = QPushButton("提示")
+        self.info_btn.clicked.connect(self.open_upload_info)
+        self.info_btn.setIcon(QIcon(images_path(self.application_path, 'info.png')))
+        self.info_btn.setIconSize(QSize(30, 30))
+        self.info_btn.setFixedSize(50, 25)
+        header_right_layout.addWidget(self.info_btn)
         upload_btn = QPushButton("上传文件")
         upload_btn.setIcon(QIcon(images_path(self.application_path, 'upload.png')))
         upload_btn.setIconSize(QSize(30, 30))
@@ -74,12 +74,37 @@ class UploadSpace(QFrame):
     @Slot()
     def open_upload_info(self):
         print(self.x())
-        self.info_dialog = CustomDialogModal(x=self.x(), y=90, width=300, height=50)
-        self.info_dialog.show()
+        self.info_dialog = CustomDialogModal(x=604, y=100, width=300, height=120)
         main_layout = self.info_dialog.setup_layout()
-        label = QLabel("上传文件的历史记录")
-        label.setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border-radius: 4px;")
-        main_layout.layout().addWidget(self.info_dialog)
+        self.info_dialog.dialog.frame.setObjectName("info_main_layout_dialog")
+        self.info_dialog.dialog.setStyleSheet(
+            """
+                QFrame#info_main_layout_dialog {
+                    background-color: rgba(0, 0, 0, 0.4); 
+                    border-radius: 4px; 
+                    padding: 10px;
+                }
+                QLabel {
+                    color: white;
+                }
+            """
+        )
+        main_layout.setAlignment(Qt.AlignTop)
+        content_layout = QVBoxLayout()
+        label1 = QLabel("上传文件须符合一下规则：")
+        text2 = "⭐ 单次上传文件大小不能为0KB，不超过500MB，数量不超过50个"
+        label2 = QLabel()
+        formatted_text = text2[:20] + "<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + text2[20:]
+        label2.setText(formatted_text)
+        label2.setWordWrap(True)
+        label3 = QLabel("⭐ 文件名字符数小于60个字符(包含文件后缓)")
+        label4 = QLabel("⭐ 文件名不包含单引号")
+        content_layout.addWidget(label1)
+        content_layout.addWidget(label2)
+        content_layout.addWidget(label3)
+        content_layout.addWidget(label4)
+        main_layout.addLayout(content_layout)
+        self.main_window.layout().addWidget(self.info_dialog)
 
     def moveEvent(self, event):
         print(event)
