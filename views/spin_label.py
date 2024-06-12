@@ -12,12 +12,21 @@ class SpinFrame(QFrame):
         self.setStyleSheet("background-color: rgba(255,255,255,0.4);")
         self._label_width = width
         self._label_width = height
-        self.label_label = SpinLabel(self)
+        self.spin_label = SpinLabel(self)
         self.raise_()
 
-    def pause_move(self):
-        self.label_label.pause_movie()
+    def delete_spin(self):
+        self.spin_label.delete_spin()
         self.deleteLater()
+
+    def hide_spin(self):
+        self.spin_label.hide_spin()
+        self.hide()
+
+    def show_spin(self):
+        self.show()
+        self.spin_label.movie.start()
+        self.spin_label.show()
 
 
 class SpinLabel(QLabel):
@@ -33,6 +42,10 @@ class SpinLabel(QLabel):
         self.raise_()
         self.movie.start()
 
-    def pause_movie(self):
+    def delete_spin(self):
         self.movie.stop()
         self.movie.deleteLater()
+
+    def hide_spin(self):
+        self.movie.stop()
+        self.hide()

@@ -111,7 +111,7 @@ class ApkStoreSpace(QFrame):
             item1.setSizeHint(widget.sizeHint())
             self.app_list1.setItemWidget(item1, widget)
 
-        self.spin_frame.pause_move()
+        self.spin_frame.delete_spin()
 
     def filter_apk_list(self, params_list):
         """ 过滤所有apk文件 """

@@ -1,15 +1,28 @@
+import dataclasses
 import os
 import time
 
+from dataclasses import field
+from functools import partial
+
+from typing import Optional
+
 from PySide6.QtCore import QSize, Slot, QThread
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, Qt
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
-    QHeaderView, QVBoxLayout
+    QHeaderView, QVBoxLayout, QMessageBox
 
 from views.config import PROXY_WIDTH
+from views.confirm_msg_box import ConfirmationParams, ConfirmMsgBox
 from views.spin_label import SpinFrame
 from views.util import view_cursor
 from views.worker_thread import WorkerThread
+
+PROXY_MAPPING = {
+    1: 'socks5',
+    2: 'http',
+    3: 'https'
+}
 
 
 class ProxySpace(QFrame):
@@ -36,22 +49,14 @@ class ProxySpace(QFrame):
         self.main_layout.addSpacing(20)
 
         # Table
-        table = QTableWidget(2, 3)
-        table.setFixedSize(420, 565)
+        self.table = QTableWidget(0, 3)
+        self.table.setFixedSize(420, 565)
 
-        table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        table.setCellWidget(0, 0, QLabel("socks5://1:1"))
-        table.setCellWidget(0, 1, QLabel("1"))
-        table.setCellWidget(0, 2, self.create_operations_widget())
-
-        table.setCellWidget(1, 0, QLabel("socks5://2222:1"))
-        table.setCellWidget(1, 1, QLabel("1"))
-        table.setCellWidget(1, 2, self.create_operations_widget())
+        self.table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # 将表格添加到主layout里面去
-        self.main_layout.addWidget(table)
+        self.main_layout.addWidget(self.table)
 
         # 将分页添加到主layout里面去
         self.create_pagination_widget()
@@ -69,6 +74,9 @@ class ProxySpace(QFrame):
             QPushButton#clear_proxy_btn:hover {
                 background-color: rgb(255, 55, 58);
             }
+            QPushButton#clear_proxy_btn:pressed{
+                background-color: rgb(255, 33, 33);
+            }
             QPushButton#switch_operate_btn {
                 background-color: rgb(30, 77, 255); 
                 color: white;
@@ -76,6 +84,9 @@ class ProxySpace(QFrame):
             }
             QPushButton#switch_operate_btn:hover {
                 background-color: rgb(15, 50, 255); 
+            }
+            QPushButton#switch_operate_btn:pressed{
+                background-color: rgb(0, 30, 255);
             }
             QPushButton#delete_operate_btn {
                 color: rgb(255, 77, 79);
@@ -86,6 +97,11 @@ class ProxySpace(QFrame):
                 color: rgb(255, 55, 58);
                 border-radius: 2px;
                 background-color: #eee; 
+            }
+            QPushButton#delete_operate_btn:pressed {
+                color: rgb(255, 33, 55);
+                border-radius: 2px;
+                background-color: #ccc;
             }
             QPushButton#outline_btn_none {
                 border: none;
@@ -98,18 +114,12 @@ class ProxySpace(QFrame):
             QPushButton#outline_btn_none:pressed {
                 background-color: #ccc;
             }
-            
             #proxy_space_frame { 
                 border: 1px solid gray; background-color: white; 
             }
-            
             QHeaderView::section:horizontal {
                 border: 1px solid gray;
             }
-            QTableCornerButton::section {
-                border: none;  /* 移除表头左上角的边框 */
-            }
-            
         """)
         self.spin_frame = SpinFrame(self)
         self.load_data()
@@ -125,18 +135,31 @@ class ProxySpace(QFrame):
         self.thread_env_detail.start()
 
     @Slot(object, str)
-    def on_data_fetched(self, data, type):
+    def on_data_fetched(self, data, fetched_type):
         self.done_thread += 1
 
-        if type == 'env_detail':
-            self.env_detail_data = data
-        if type == 'vpc_list':
-            self.vpc_list_data = data
+        if fetched_type == 'env_detail':
+            addr = data['addr'] if 'addr' in data else '暂无'
+            proxy_type = PROXY_MAPPING.get(data['type']) if 'type' in data else '暂无'
+            status_type = data['statusText'] if 'statusText' in data else '暂无'
+            self.update_top_view(addr, status_type, proxy_type)
+        if fetched_type == 'vpc_list':
+            len_data = len(data)
+            self.table.setRowCount(len_data)
+            self.total_label.setText(f"总数：{len_data}")
+            for index, item in enumerate(data):
+                proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
+                self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
+                self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
+                self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
 
         if self.done_thread == 2:
-            self.spin_frame.pause_move()
+            self.spin_frame.hide_spin()
 
-
+    def update_top_view(self, addr='', status_text='', type=''):
+        self.ip_label.setText(f"IP地址：{addr}")
+        self.start_status_label.setText(f"启动状态：{status_text}")
+        self.proxy_type_label.setText(f"代理类型：{type}")
 
     def create_top_widget(self):
         self.top_layout = QHBoxLayout()
@@ -144,30 +167,67 @@ class ProxySpace(QFrame):
         top_left_second_layout = QHBoxLayout()
 
         # top left
-        ip_label = QLabel("IP地址：socks5://1:1@22222:1")
-        start_status_label = QLabel("启动状态：已启动")
-        proxy_type_label = QLabel("代理类型：socks5")
-        top_left_second_layout.addWidget(start_status_label)
+        self.ip_label = QLabel(f"IP地址：暂无")
+        self.start_status_label = QLabel(f"启动状态：未启动")
+        self.proxy_type_label = QLabel(f"代理类型：socks")
+        top_left_second_layout.addWidget(self.start_status_label)
         top_left_second_layout.addSpacing(20)  # 增加固定大小的空白
-        top_left_second_layout.addWidget(proxy_type_label)
-        top_left_layout.addWidget(ip_label)
+        top_left_second_layout.addWidget(self.proxy_type_label)
+        top_left_layout.addWidget(self.ip_label)
         top_left_layout.addSpacing(10)
         top_left_layout.addLayout(top_left_second_layout)
 
         # top right
-        clear_button = QPushButton("清空当前代理")
-        clear_button.setObjectName("clear_proxy_btn")
+        self.clear_button = QPushButton("清空当前代理")
+        self.clear_button.setObjectName("clear_proxy_btn")
+        self.clear_button.clicked.connect(self.handle_clear_proxy)
 
-        view_cursor(clear_button)
+        view_cursor(self.clear_button)
         self.top_layout.addLayout(top_left_layout)
         self.top_layout.addStretch()
-        self.top_layout.addWidget(clear_button)
+        self.top_layout.addWidget(self.clear_button)
         self.main_layout.addLayout(self.top_layout)
+
+    @Slot()
+    def handle_clear_proxy(self):
+        button_position = self.clear_button.mapToGlobal(self.clear_button.rect().center())
+        message_box = ConfirmMsgBox(self,
+                                    ConfirmationParams(position=button_position, on_yes=self.handle_clear_proxy_yes,
+                                                       on_no=self.handle_clear_proxy_no, title="清除代理",
+                                                       text="你确定是否清除当前代理"))
+        message_box.exec_()
+
+    @Slot()
+    def handle_clear_proxy_yes(self):
+        self.spin_frame.show_spin()
+        self.thread_clear_proxy = WorkerThread(token=self.token, url='env/clearVpc', data={'envId': self.env_id},
+                                               option={"method": "post"})
+        self.thread_clear_proxy.data_fetched.connect(self.refresh_env_detail)
+        self.thread_clear_proxy.start()
+
+    @Slot()
+    def refresh_env_detail(self):
+        self.thread_env_detail = WorkerThread(token=self.token, url='env/getCurrentVpc', data={'envId': self.env_id},
+                                              option={"method": 'post'})
+        self.thread_env_detail.data_fetched.connect(self.refreshed_env_detail)
+        self.thread_env_detail.start()
+
+    @Slot()
+    def refreshed_env_detail(self, data):
+        addr = data['addr'] if 'addr' in data else '暂无'
+        proxy_type = PROXY_MAPPING.get(data['type']) if 'type' in data else '暂无'
+        status_type = data['status_type'] if 'status_type' in data else '暂无'
+        self.update_top_view(addr, status_type, proxy_type)
+        self.spin_frame.hide_spin()
+
+    @Slot()
+    def handle_clear_proxy_no(self):
+        print("No clicked!")
 
     def create_pagination_widget(self):
         self.bottom_layout = QHBoxLayout()
 
-        total_label = QLabel("总数：2")
+        self.total_label = QLabel("总数：0")
         page_label = QLabel("1")
 
         prev_button = QPushButton()
@@ -182,7 +242,7 @@ class ProxySpace(QFrame):
         view_cursor(next_button)
 
         page_layout = QHBoxLayout()
-        page_layout.addWidget(total_label)
+        page_layout.addWidget(self.total_label)
         page_layout.addStretch()
         page_layout.addWidget(prev_button)
         page_layout.addWidget(page_label)
@@ -194,20 +254,77 @@ class ProxySpace(QFrame):
         self.bottom_layout.addWidget(per_page_label)
         self.main_layout.addLayout(self.bottom_layout)
 
-    @staticmethod
-    def create_operations_widget():
+    def create_operations_widget(self, vpc_id: int):
         widget = QWidget()
         layout = QHBoxLayout()
         switch_button = QPushButton("切换")
         switch_button.setFixedSize(50, 20)
-        delete_button = QPushButton("删除")
-        delete_button.setFixedSize(50, 20)
+        switch_button.clicked.connect(partial(self.handle_switch_proxy_btn, vpc_id))
+        self.delete_button = QPushButton("删除")
+        self.delete_button.setFixedSize(50, 20)
+        self.delete_button.clicked.connect(partial(self.handle_delete_proxy_btn, vpc_id))
         layout.addWidget(switch_button)
-        layout.addWidget(delete_button)
+        layout.addWidget(self.delete_button)
         switch_button.setObjectName("switch_operate_btn")
-        delete_button.setObjectName("delete_operate_btn")
-        view_cursor(delete_button)
+        self.delete_button.setObjectName("delete_operate_btn")
+        view_cursor(self.delete_button)
         view_cursor(switch_button)
         layout.setContentsMargins(0, 0, 0, 0)
         widget.setLayout(layout)
         return widget
+
+    @Slot()
+    def handle_switch_proxy_btn(self, vpc_id):
+        self.spin_frame.show_spin()
+        self.thread_switch_proxy = WorkerThread(token=self.token, url='env/setVpc', data={
+            'envId': self.env_id,
+            'vpcId': vpc_id
+        }, option={"method": "post"})
+
+        self.thread_switch_proxy.data_fetched.connect(self.refresh_env_detail)
+        self.thread_switch_proxy.start()
+
+    @Slot()
+    def handle_delete_proxy_btn(self, vpc_id):
+        button_position = self.delete_button.mapToGlobal(self.delete_button.rect().center())
+        message_box = ConfirmMsgBox(self,
+                                    ConfirmationParams(position=button_position,
+                                                       on_yes=partial(self.handle_delete_proxy_yes, vpc_id),
+                                                       on_no=self.handle_clear_proxy_no, title="删除代理",
+                                                       text="你确定是否删除代理"))
+        message_box.exec_()
+
+    @Slot()
+    def handle_delete_proxy_yes(self, vpc_id):
+        self.spin_frame.show_spin()
+        self.thread_delete_vpc_list = WorkerThread(token=self.token, url='vpc/delete', data={"id": vpc_id},
+                                                   option={"method": "post"})
+        self.thread_delete_vpc_list.data_fetched.connect(self.refresh_vpc_list)
+        self.thread_delete_vpc_list.start()
+
+    @Slot()
+    def refresh_vpc_list(self):
+        self.spin_frame.show_spin()
+        self.thread_vpc_list = WorkerThread(token=self.token, url='vpc/getAll')
+        self.thread_vpc_list.data_fetched.connect(self.refreshed_vpc_list)
+        self.thread_vpc_list.start()
+
+    @Slot()
+    def refreshed_vpc_list(self, data):
+        self.table.setRowCount(len(data))
+        self.table.setColumnCount(3)
+        self.total_label.setText(f"总数：{len(data)}")
+        for index, item in enumerate(data):
+            proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
+            self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
+            self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
+            self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
+        self.spin_frame.hide_spin()
+
+    def create_cell_widget(self, widget: QWidget):
+        container = QWidget()
+        layout = QHBoxLayout()
+        layout.addWidget(widget)
+        layout.setContentsMargins(5, 5, 5, 5)  # 设置边距
+        container.setLayout(layout)
+        return container
