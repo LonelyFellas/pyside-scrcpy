@@ -5,17 +5,20 @@ from views.config import UPLOAD_WIDTH
 from views.dialog import CustomDialogModal
 from views.util import images_path
 from views.upload_dialog import UploadDialog
+from views.divider import Divider
 
 
 class UploadSpace(QFrame):
     def __init__(self, parent=None, width_window=0, application_path='', token='', env_id=2):
         super().__init__(parent)
-
+        self.setObjectName("upload_space_frame")
+        self.setStyleSheet("#upload_space_frame {background-color: white; border: 1px solid gray;}")
         self.setGeometry(width_window, 10, UPLOAD_WIDTH - 10, parent.size().height() - 20)
         self.layout = QVBoxLayout(self)
         self.application_path = application_path
         self.create_top_view()
         self.create_main_header_view()
+        self.layout.addWidget(Divider(self))
         self.layout.setAlignment(Qt.AlignTop)
         self.main_window = self.window()
 
@@ -46,13 +49,13 @@ class UploadSpace(QFrame):
         self.left_label = QLabel("全部文件（1）")
         header_layout.addWidget(self.left_label)
         header_right_layout = QHBoxLayout()
-        self.history_upload_btn = QPushButton("上传")
+        self.history_upload_btn = QPushButton("")
         self.history_upload_btn.clicked.connect(self.open_upload_dialog)
         self.history_upload_btn.setIcon(QIcon(images_path(self.application_path, 'file-upload.png')))
         self.history_upload_btn.setIconSize(QSize(30, 30))
         self.history_upload_btn.setFixedSize(50, 25)
         header_right_layout.addWidget(self.history_upload_btn)
-        self.info_btn = QPushButton("提示")
+        self.info_btn = QPushButton("")
         self.info_btn.clicked.connect(self.open_upload_info)
         self.info_btn.setIcon(QIcon(images_path(self.application_path, 'info.png')))
         self.info_btn.setIconSize(QSize(30, 30))
