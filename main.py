@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import time
 
 from PySide6.QtCore import QSize, Qt, QPoint, QEvent
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
