@@ -48,6 +48,8 @@ class UploadSpace(QFrame):
         self.layout.setAlignment(Qt.AlignTop)
 
         self.main_window = self.window()
+        # self.history_dialog = UploadDialog(self, application_path=self.application_path)
+        # self.main_window.layout().addWidget(self.history_dialog)
         self.setStyleSheet("""
             #upload_space_frame {
                 background-color: white; 
@@ -67,6 +69,7 @@ class UploadSpace(QFrame):
                 background-color: rgb(22, 110, 255) 
             }
         """)
+
 
     def create_top_view(self):
         top_layout = QVBoxLayout()
@@ -96,6 +99,7 @@ class UploadSpace(QFrame):
         self.left_label = QLabel("全部文件（1）")
         header_layout.addWidget(self.left_label)
         header_right_layout = QHBoxLayout()
+        header_right_layout.setSpacing(10)
         self.history_upload_btn = QPushButton("")
         self.history_upload_btn.clicked.connect(self.open_upload_dialog)
         self.history_upload_btn.setIcon(QIcon(images_path(self.application_path, 'file-upload.png')))
@@ -120,19 +124,10 @@ class UploadSpace(QFrame):
         header_layout.addLayout(header_right_layout)
         self.layout.addLayout(header_layout)
 
+
     def create_files_list_view(self):
         self.files_list = QListWidget(self)
-        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
-        print(self.handle_download_files())
-        items = self.handle_download_files()
-        self.sum = (len(items))
-
-        for item in items:
-            item_view = QListWidgetItem(self.files_list)
-            item_widget = FileItem(item_view, item, delete_icon_path)
-            item_widget.remove_item_signal.connect(self.remove_item)
-            item_view.setSizeHint(item_widget.sizeHint())
-            self.files_list.setItemWidget(item_view, item_widget)
+        self.get_list()
 
         self.layout.addWidget(self.files_list)
 
@@ -143,7 +138,15 @@ class UploadSpace(QFrame):
         return result.stdout
 
     def open_file_dialog(self):
-        print(11)
+        # 获取当前用户的下载目录
+        download_dir = os.path.join(os.path.expanduser('~'), 'Downloads')
+
+        # 打开文件选择对话框
+        file_path, _ = QFileDialog.getOpenFileName(self, "Open File", download_dir, "All Files (*)")
+        if file_path:
+            # self.
+            self.adb_push_item(file_path)
+
     def handle_download_files(self):
         res_list = self.get_download_files()
         pattern = re.compile(r'\s(\d+)\s(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s+(/.+)$', re.MULTILINE)
@@ -168,6 +171,23 @@ class UploadSpace(QFrame):
         else:
             return f"{size / (1024 * 1024 * 1024 * 1024):.2f}TB"
 
+    def get_list(self, get_type='init'):
+        if get_type == 'refresh':
+            self.files_list.clear()
+        items = self.handle_download_files()
+        self.sum = len(items)
+        if get_type == 'refresh':
+            self.pagination.set_sum_item(self.sum)
+
+        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
+        # 重新添加项
+        for item in items:
+            item_view = QListWidgetItem(self.files_list)
+            item_widget = FileItem(item_view, item, delete_icon_path)
+            item_widget.remove_item_signal.connect(self.remove_item)
+            item_view.setSizeHint(item_widget.sizeHint())
+            self.files_list.setItemWidget(item_view, item_widget)
+
     def remove_item(self, item_view: QListWidgetItem, item_delete_btn: QPushButton, filename: str):
         button_position = item_delete_btn.mapToGlobal(item_delete_btn.rect().center())
         print(button_position)
@@ -185,6 +205,7 @@ class UploadSpace(QFrame):
         self.pagination.set_sum_item(self.sum)
         self.files_list.takeItem(row)
 
+    # adb 单个移除
     def adb_remove_item(self, file_path):
         # 运行 adb 移除命令
         result = subprocess.run(f'adb -s {self.scrcpy_addr} shell rm -f {file_path}', **handle_startupinfo())
@@ -195,6 +216,23 @@ class UploadSpace(QFrame):
         else:
             print(f"Failed to delete file {file_path}. Error: {result.stderr.decode('utf-8')}")
 
+    # adb 单个上传
+    def adb_push_item(self, file_path):
+        # 目标路径为设备上的 /sdcard/Download 目录
+        target_path = "/sdcard/Download"
+
+        # 构建 adb push 命令
+        adb_command = f'adb push "{file_path}" "{target_path}"'
+
+        # 运行 adb 命令
+        result = subprocess.run(adb_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # 检查命令执行结果
+        if result.returncode == 0:
+            self.get_list('refresh')
+            print(f"File {file_path} has been uploaded to {target_path}.")
+        else:
+            print(f"Failed to upload file {file_path}. Error: {result.stderr.decode('utf-8')}")
 
     @staticmethod
     def remove_item_no():
@@ -202,12 +240,10 @@ class UploadSpace(QFrame):
 
     @Slot()
     def open_upload_dialog(self):
-        self.history_dialog = UploadDialog(self)
-        self.main_window.layout().addWidget(self.history_dialog)
+        self.history_dialog.super_show()
 
     @Slot()
     def open_upload_info(self):
-        print(self.x())
         self.info_dialog = CustomDialogModal(x=604, y=105, width=300, height=120)
         main_layout = self.info_dialog.setup_layout()
         self.info_dialog.dialog.frame.setObjectName("info_main_layout_dialog")
