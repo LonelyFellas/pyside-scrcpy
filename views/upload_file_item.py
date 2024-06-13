@@ -6,10 +6,11 @@ from views.util import view_cursor
 
 
 class FileItem(QWidget):
-    remove_item_signal = Signal(QListWidgetItem, QPushButton)
+    remove_item_signal = Signal(QListWidgetItem, QPushButton, str)
 
-    def __init__(self, item: QListWidgetItem, icon='', name='', size='', delete_icon_path=''):
+    def __init__(self, item_view: QListWidgetItem, item, delete_icon_path=''):
         super().__init__()
+        self.item_view = item_view
         self.item = item
         layout = QHBoxLayout()
 
@@ -18,17 +19,27 @@ class FileItem(QWidget):
 
         # cover
         file_cover = QLabel()
-        icon_pixmap = QPixmap(icon).scaled(30, 30, aspectMode=Qt.KeepAspectRatio)
+        icon_pixmap = QPixmap(item['cover']).scaled(30, 30, aspectMode=Qt.KeepAspectRatio)
         file_cover.setPixmap(icon_pixmap)
         right_layout.addWidget(file_cover)
 
-        # name and size
-        name_size_layout = QVBoxLayout()
-        file_name = QLabel(name)
-        name_size_layout.addWidget(file_name)
-        file_size = QLabel(size)
-        name_size_layout.addWidget(file_size)
-        right_layout.addLayout(name_size_layout)
+        # name
+        info_layout = QVBoxLayout()
+        file_name = QLabel(item['filename'].split('/')[-1])
+        info_layout.addWidget(file_name)
+
+        # size and date
+        size_date_layout = QHBoxLayout()
+        size_date_layout.setAlignment(Qt.AlignLeft)
+        size_date_layout.setSpacing(20)
+        file_size = QLabel(item['size'])
+        size_date_layout.addWidget(file_size)
+        file_size = QLabel(item['date'])
+        size_date_layout.addWidget(file_size)
+
+        info_layout.addLayout(size_date_layout)
+
+        right_layout.addLayout(info_layout)
 
         layout.addLayout(right_layout)
 
@@ -62,7 +73,7 @@ class FileItem(QWidget):
 
     def remove_item(self):
         # 发送自定义信号，通知父控件删除该项
-        self.remove_item_signal.emit(self.item, self.delete_icon_btn)
+        self.remove_item_signal.emit(self.item_view, self.delete_icon_btn, self.item['filename'])
 
 
 
