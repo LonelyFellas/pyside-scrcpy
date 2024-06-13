@@ -42,6 +42,19 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
+        self.setStyleSheet("""
+            QPushButton#outline_btn_none {
+                border: none;
+                outline: none;
+            }
+            QPushButton#outline_btn_none:hover {
+                background-color: #eee; 
+                border-radius: 2px;
+            }
+            QPushButton#outline_btn_none:pressed {
+                background-color: #ccc;
+            }
+        """)
 
     # 监听键盘的事件
     def keyPressEvent(self, event: QKeyEvent):
@@ -414,8 +427,7 @@ class MainWindow(QMainWindow):
         """
         self.other_close_space('upload_expend', 'upload_space')
         width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
-        self.upload_space = UploadSpace(self, width_window, application_path=application_path, token=token,
-                                        env_id=env_id)
+        self.upload_space = UploadSpace(self, width_window, application_path=application_path, scrcpy_addr=self.scrcpy_addr)
         self.upload_space.show()
 
     def open_upload_space_history_dialog(self):

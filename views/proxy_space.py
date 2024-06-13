@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel,
 
 from views.config import PROXY_WIDTH
 from views.confirm_msg_box import ConfirmationParams, ConfirmMsgBox
+from views.pagination_widget import PaginationWidget
 from views.spin_label import SpinFrame
 from views.util import view_cursor
 from views.worker_thread import WorkerThread
@@ -42,24 +43,26 @@ class ProxySpace(QFrame):
         self.setStyleSheet("#proxy_space_frame { border: 1px solid gray; background-color: white; }")
 
         self.main_layout = QVBoxLayout()
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(10, 10, 10, 0)
 
         # Top part with IP address, status and type
         self.create_top_widget()
 
-        self.main_layout.addSpacing(20)
+        self.main_layout.addSpacing(10)
 
         # Table
         self.table = QTableWidget(0, 3)
-        self.table.setFixedSize(420, 565)
+        self.table.setContentsMargins(0, 0, 0, 0)
+        self.table.setFixedSize(420, 585)
 
         self.table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # 将表格添加到主layout里面去
         self.main_layout.addWidget(self.table)
-
-        # 将分页添加到主layout里面去
-        self.create_pagination_widget()
+        self.pagination = PaginationWidget(self.application_path)
+        self.main_layout.addWidget(self.pagination)
 
         container = QWidget(self)
         container.setLayout(self.main_layout)
@@ -103,17 +106,6 @@ class ProxySpace(QFrame):
                 border-radius: 2px;
                 background-color: #ccc;
             }
-            QPushButton#outline_btn_none {
-                border: none;
-                outline: none;
-            }
-            QPushButton#outline_btn_none:hover {
-                background-color: #eee; 
-                border-radius: 2px;
-            }
-            QPushButton#outline_btn_none:pressed {
-                background-color: #ccc;
-            }
             #proxy_space_frame { 
                 border: 1px solid gray; background-color: white; 
             }
@@ -146,7 +138,7 @@ class ProxySpace(QFrame):
         if fetched_type == 'vpc_list':
             len_data = len(data)
             self.table.setRowCount(len_data)
-            self.total_label.setText(f"总数：{len_data}")
+            self.pagination.set_sum_item(len_data)
             for index, item in enumerate(data):
                 proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
                 self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
@@ -224,35 +216,7 @@ class ProxySpace(QFrame):
     def handle_clear_proxy_no(self):
         print("No clicked!")
 
-    def create_pagination_widget(self):
-        self.bottom_layout = QHBoxLayout()
-
-        self.total_label = QLabel("总数：0")
-        page_label = QLabel("1")
-
-        prev_button = QPushButton()
-        prev_button.setIcon(QIcon(os.path.join(self.application_path, 'images', 'prev_page.png')))
-        prev_button.setObjectName("outline_btn_none")
-        prev_button.setIconSize(QSize(24, 24))
-        view_cursor(prev_button)
-        next_button = QPushButton()
-        next_button.setIcon(QIcon(os.path.join(self.application_path, 'images', 'next_page.png')))
-        next_button.setObjectName("outline_btn_none")
-        next_button.setIconSize(QSize(24, 24))
-        view_cursor(next_button)
-
-        page_layout = QHBoxLayout()
-        page_layout.addWidget(self.total_label)
-        page_layout.addStretch()
-        page_layout.addWidget(prev_button)
-        page_layout.addWidget(page_label)
-        page_layout.addWidget(next_button)
-
-        self.bottom_layout.addLayout(page_layout)
-
-        per_page_label = QLabel("10条/页")
-        self.bottom_layout.addWidget(per_page_label)
-        self.main_layout.addLayout(self.bottom_layout)
+    # def create_pagination_widget(self):
 
     def create_operations_widget(self, vpc_id: int):
         widget = QWidget()
@@ -260,14 +224,14 @@ class ProxySpace(QFrame):
         switch_button = QPushButton("切换")
         switch_button.setFixedSize(50, 20)
         switch_button.clicked.connect(partial(self.handle_switch_proxy_btn, vpc_id))
-        self.delete_button = QPushButton("删除")
-        self.delete_button.setFixedSize(50, 20)
-        self.delete_button.clicked.connect(partial(self.handle_delete_proxy_btn, vpc_id))
+        delete_button = QPushButton("删除")
+        delete_button.setFixedSize(50, 20)
+        delete_button.clicked.connect(partial(self.handle_delete_proxy_btn, vpc_id, delete_button))
         layout.addWidget(switch_button)
-        layout.addWidget(self.delete_button)
+        layout.addWidget(delete_button)
         switch_button.setObjectName("switch_operate_btn")
-        self.delete_button.setObjectName("delete_operate_btn")
-        view_cursor(self.delete_button)
+        delete_button.setObjectName("delete_operate_btn")
+        view_cursor(delete_button)
         view_cursor(switch_button)
         layout.setContentsMargins(0, 0, 0, 0)
         widget.setLayout(layout)
@@ -285,8 +249,8 @@ class ProxySpace(QFrame):
         self.thread_switch_proxy.start()
 
     @Slot()
-    def handle_delete_proxy_btn(self, vpc_id):
-        button_position = self.delete_button.mapToGlobal(self.delete_button.rect().center())
+    def handle_delete_proxy_btn(self, vpc_id, delete_btn: QPushButton):
+        button_position = delete_btn.mapToGlobal(delete_btn.rect().center())
         message_box = ConfirmMsgBox(self,
                                     ConfirmationParams(position=button_position,
                                                        on_yes=partial(self.handle_delete_proxy_yes, vpc_id),
@@ -313,7 +277,7 @@ class ProxySpace(QFrame):
     def refreshed_vpc_list(self, data):
         self.table.setRowCount(len(data))
         self.table.setColumnCount(3)
-        self.total_label.setText(f"总数：{len(data)}")
+        self.pagination.set_sum_item(len(data))
         for index, item in enumerate(data):
             proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
             self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
@@ -321,7 +285,8 @@ class ProxySpace(QFrame):
             self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
         self.spin_frame.hide_spin()
 
-    def create_cell_widget(self, widget: QWidget):
+    @staticmethod
+    def create_cell_widget(widget: QWidget):
         container = QWidget()
         layout = QHBoxLayout()
         layout.addWidget(widget)
