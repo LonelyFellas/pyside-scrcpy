@@ -8,7 +8,7 @@ from views.win_event import handle_startupinfo
 
 
 class AppItem(QWidget):
-    def __init__(self, icon_path, name, version, url, scrcpy_addr = ''):
+    def __init__(self, icon_path, name, version, url, scrcpy_addr=''):
         super().__init__()
         self.url = url
         self.scrcpy_addr = scrcpy_addr

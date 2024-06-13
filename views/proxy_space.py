@@ -260,14 +260,14 @@ class ProxySpace(QFrame):
         switch_button = QPushButton("切换")
         switch_button.setFixedSize(50, 20)
         switch_button.clicked.connect(partial(self.handle_switch_proxy_btn, vpc_id))
-        self.delete_button = QPushButton("删除")
-        self.delete_button.setFixedSize(50, 20)
-        self.delete_button.clicked.connect(partial(self.handle_delete_proxy_btn, vpc_id))
+        delete_button = QPushButton("删除")
+        delete_button.setFixedSize(50, 20)
+        delete_button.clicked.connect(partial(self.handle_delete_proxy_btn, vpc_id, delete_button))
         layout.addWidget(switch_button)
-        layout.addWidget(self.delete_button)
+        layout.addWidget(delete_button)
         switch_button.setObjectName("switch_operate_btn")
-        self.delete_button.setObjectName("delete_operate_btn")
-        view_cursor(self.delete_button)
+        delete_button.setObjectName("delete_operate_btn")
+        view_cursor(delete_button)
         view_cursor(switch_button)
         layout.setContentsMargins(0, 0, 0, 0)
         widget.setLayout(layout)
@@ -285,8 +285,8 @@ class ProxySpace(QFrame):
         self.thread_switch_proxy.start()
 
     @Slot()
-    def handle_delete_proxy_btn(self, vpc_id):
-        button_position = self.delete_button.mapToGlobal(self.delete_button.rect().center())
+    def handle_delete_proxy_btn(self, vpc_id, delete_btn: QPushButton):
+        button_position = delete_btn.mapToGlobal(delete_btn.rect().center())
         message_box = ConfirmMsgBox(self,
                                     ConfirmationParams(position=button_position,
                                                        on_yes=partial(self.handle_delete_proxy_yes, vpc_id),
@@ -321,7 +321,8 @@ class ProxySpace(QFrame):
             self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
         self.spin_frame.hide_spin()
 
-    def create_cell_widget(self, widget: QWidget):
+    @staticmethod
+    def create_cell_widget(widget: QWidget):
         container = QWidget()
         layout = QHBoxLayout()
         layout.addWidget(widget)
