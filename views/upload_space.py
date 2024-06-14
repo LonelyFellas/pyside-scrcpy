@@ -3,7 +3,7 @@ import re
 import subprocess
 from functools import partial
 
-from PySide6.QtCore import QRect, QSize, Slot, QPoint
+from PySide6.QtCore import QRect, QSize, Slot
 from PySide6.QtGui import Qt, QIcon
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFileDialog, \
     QListWidget, QListWidgetItem, QSpacerItem
@@ -16,6 +16,7 @@ from views.pagination_widget import PaginationWidget
 from views.upload_file_item import FileItem
 from views.util import images_path
 from views.upload_dialog import UploadDialog
+from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
@@ -26,6 +27,7 @@ class UploadSpace(QFrame):
         self.setObjectName("upload_space_frame")
         self.setContentsMargins(0, 0, 0, 0)
         self.setGeometry(width_window, 10, UPLOAD_WIDTH - 10, parent.size().height() - 20)
+        self.items = []
 
         spacer = QSpacerItem(0, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.layout = QVBoxLayout(self)
@@ -48,8 +50,9 @@ class UploadSpace(QFrame):
         self.layout.setAlignment(Qt.AlignTop)
 
         self.main_window = self.window()
-        # self.history_dialog = UploadDialog(self, application_path=self.application_path)
-        # self.main_window.layout().addWidget(self.history_dialog)
+        self.history_dialog = UploadDialog(self, self.items, application_path)
+        self.history_dialog.hide()
+
         self.setStyleSheet("""
             #upload_space_frame {
                 background-color: white; 
@@ -69,7 +72,6 @@ class UploadSpace(QFrame):
                 background-color: rgb(22, 110, 255) 
             }
         """)
-
 
     def create_top_view(self):
         top_layout = QVBoxLayout()
@@ -96,7 +98,7 @@ class UploadSpace(QFrame):
 
     def create_main_header_view(self):
         header_layout = QHBoxLayout()
-        self.left_label = QLabel("全部文件（1）")
+        self.left_label = QLabel("全部文件（0）")
         header_layout.addWidget(self.left_label)
         header_right_layout = QHBoxLayout()
         header_right_layout.setSpacing(10)
@@ -124,7 +126,6 @@ class UploadSpace(QFrame):
         header_layout.addLayout(header_right_layout)
         self.layout.addLayout(header_layout)
 
-
     def create_files_list_view(self):
         self.files_list = QListWidget(self)
         self.get_list()
@@ -144,11 +145,38 @@ class UploadSpace(QFrame):
         # 打开文件选择对话框
         file_path, _ = QFileDialog.getOpenFileName(self, "Open File", download_dir, "All Files (*)")
         if file_path:
-            # self.
-            self.adb_push_item(file_path)
+            filename = os.path.basename(file_path)
+            filesize = os.stat(file_path).st_size
+            self.open_upload_dialog()
+            self.history_dialog.push_item(filename, self.format_size(filesize))
+            self.adb_thread = AdbPushThread(self.scrcpy_addr, local_path=file_path,
+                                            remote_path=f'/sdcard/Download/{filename}', filename=filename)
+            self.adb_thread.progress_signal.connect(self.update_progress)
+            self.adb_thread.speed_signal.connect(self.update_speed)
+            self.adb_thread.message_signal.connect(self.show_message)
+            self.adb_thread.start()
+
+    @Slot(int, str)
+    def update_progress(self, progress, filename):
+        self.history_dialog.update_progress_value(progress, filename)
+        print(f'progress: {progress}')
+
+    @Slot(float, str)
+    def update_speed(self, speed, filename):
+        self.history_dialog.update_speed_value(speed, filename)
+
+    @Slot(str, str)
+    def show_message(self, message: str, filename):
+        if message.find("Success") != -1:
+            self.history_dialog.update_progress_value(100, filename)
+            self.history_dialog.update_speed_value(-1, filename)
+
+            self.get_list('refresh')
 
     def handle_download_files(self):
         res_list = self.get_download_files()
+        if res_list == '' or res_list is None:
+            return []
         pattern = re.compile(r'\s(\d+)\s(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s+(/.+)$', re.MULTILINE)
         matches = pattern.findall(res_list)
         cover_path = os.path.join(self.application_path, 'images', 'flc-file-icon.png')
@@ -176,6 +204,7 @@ class UploadSpace(QFrame):
             self.files_list.clear()
         items = self.handle_download_files()
         self.sum = len(items)
+        self.left_label.setText(f"全部（{self.sum}）")
         if get_type == 'refresh':
             self.pagination.set_sum_item(self.sum)
 
@@ -203,6 +232,7 @@ class UploadSpace(QFrame):
         row = self.files_list.row(item)
         self.sum -= 1
         self.pagination.set_sum_item(self.sum)
+        self.left_label.setText(f"全部（{self.sum}）")
         self.files_list.takeItem(row)
 
     # adb 单个移除
@@ -222,17 +252,25 @@ class UploadSpace(QFrame):
         target_path = "/sdcard/Download"
 
         # 构建 adb push 命令
-        adb_command = f'adb push "{file_path}" "{target_path}"'
+        adb_command = f'adb push "{file_path}" "{target_path}" dev/null && echo OK'
 
         # 运行 adb 命令
-        result = subprocess.run(adb_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.run(adb_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
+        while True:
+            line = process.stdout.readline().decode('utf-8').rstrip()
+            # 判断输出中是否包含进度信息
+            if line.startswith('%') or line.startswith('100%'):  # 通常进度信息以百分比开始
+                print(line)  # 打印进度信息
+            elif process.poll() is not None:
+                # 进程已经结束
+                break
         # 检查命令执行结果
-        if result.returncode == 0:
+        if process.returncode == 0:
             self.get_list('refresh')
             print(f"File {file_path} has been uploaded to {target_path}.")
         else:
-            print(f"Failed to upload file {file_path}. Error: {result.stderr.decode('utf-8')}")
+            print(f"Failed to upload file {file_path}. Error: {process.stderr.decode('utf-8')}")
 
     @staticmethod
     def remove_item_no():
@@ -240,6 +278,9 @@ class UploadSpace(QFrame):
 
     @Slot()
     def open_upload_dialog(self):
+        if self.history_dialog.main_layout is None:
+            self.main_window.layout().addWidget(self.history_dialog)
+            self.history_dialog.setup_ui()
         self.history_dialog.super_show()
 
     @Slot()

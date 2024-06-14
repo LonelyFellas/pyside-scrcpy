@@ -3,8 +3,8 @@ from PySide6.QtWidgets import QDialog, QFrame, QGraphicsDropShadowEffect, QVBoxL
 
 
 class CustomDialogModal(QFrame):
-    def __init__(self, parent=None, x=0, y=0, width=200, height=100):
-        super().__init__(parent)
+    def __init__(self, x=0, y=0, width=200, height=100):
+        super().__init__()
         self.setGeometry(0, 0, 1020, 702)
         self.dialog = CustomDialog(self, x, y, width, height)
         self.installEventFilter(self)
