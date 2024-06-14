@@ -26,7 +26,7 @@ else:
 
 class MainWindow(QMainWindow):
     expend_attrs = ['app_store_expend', 'proxy_expend', 'upload_expend']
-    space_attrs = ['app_store_space', 'proxy_space', 'upload_space.py']
+    space_attrs = ['app_store_space', 'proxy_space', 'upload_space']
 
     def __init__(self):
         super().__init__()
@@ -285,7 +285,6 @@ class MainWindow(QMainWindow):
                 button.setEnabled(False)
                 button.setCursor(QCursor(Qt.ForbiddenCursor))
 
-        self.create_upload_files()
 
     def on_rotate_screen(self):
         startupinfo = subprocess.STARTUPINFO()
@@ -362,6 +361,7 @@ class MainWindow(QMainWindow):
 
         for attr in s_attrs:
             space = getattr(self, attr, None)
+            print()
             if space is not None:
                 space.hide()
 
@@ -405,19 +405,28 @@ class MainWindow(QMainWindow):
         self.app_store_space.show()
         self.app_store_space.raise_()
 
+    def close_proxy_view(self):
+        if self.proxy_space is not None:
+            self.layout.removeWidget(self.proxy_space)
+            self.proxy_space.hide()
+
+    def close_upload_files(self):
+        if self.upload_space is not None:
+            self.layout.removeWidget(self.upload_space)
+            self.upload_space.hide()
+
     def create_proxy_view(self):
         """
         点击代理按钮，显示代理的view
         :return:
         """
+        # self.close_upload_files()
         # 关闭其他展开的扩展的视图
-        self.layout = QVBoxLayout(self)
         self.other_close_space('proxy_expend', 'proxy_space')
 
         width_window = self.expend_window_size(PROXY_WIDTH, self.proxy_expend)
         # 设置小部件的布局
         self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token, env_id=env_id)
-        self.layout.addWidget(self.proxy_space)
         self.proxy_space.show()
 
     def create_upload_files(self):
@@ -425,6 +434,7 @@ class MainWindow(QMainWindow):
         点击上传文件按钮
         :return:
         """
+        # self.close_upload_files()
         self.other_close_space('upload_expend', 'upload_space')
         width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
         self.upload_space = UploadSpace(self, width_window, application_path=application_path, scrcpy_addr=self.scrcpy_addr)
@@ -472,20 +482,16 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    _, scrcpy_title, scrcpy_addr, token, env_id, env = sys.argv
-    # scrcpy_size_num = int(query_scrcpy_system_size())
-    scrcpy_size_num = 1
-    # is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
-    is_vertical_screen = True
-    if env == 'pro':
-        scrcpy_hwnd = open_scrcpy()
+    _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
+    scrcpy_size_num = int(query_scrcpy_system_size())
+    is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     window = MainWindow()
     window.show()
 
-    if env == 'pro':
-        embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
+    embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()

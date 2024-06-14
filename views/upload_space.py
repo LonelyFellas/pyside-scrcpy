@@ -44,7 +44,7 @@ class UploadSpace(QFrame):
         # 列表
         self.create_files_list_view()
         # 分页
-        self.pagination = PaginationWidget()
+        self.pagination = PaginationWidget(application_path=application_path)
         self.pagination.set_sum_item(self.sum)
         self.layout.addWidget(self.pagination)
         self.layout.setAlignment(Qt.AlignTop)
