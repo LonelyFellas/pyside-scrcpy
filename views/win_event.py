@@ -102,5 +102,6 @@ def handle_startupinfo():
         "startupinfo": startupinfo,
         "stdout": subprocess.PIPE,
         "stderr": subprocess.PIPE,
+        "encoding": 'utf-8',
         "text": True
     }
