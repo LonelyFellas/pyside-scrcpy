@@ -1,9 +1,11 @@
+import asyncio
 import os
 import re
 import subprocess
+import time
 from functools import partial
 
-from PySide6.QtCore import QRect, QSize, Slot
+from PySide6.QtCore import QRect, QSize, Slot, QThread, Signal
 from PySide6.QtGui import Qt, QIcon
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFileDialog, \
     QListWidget, QListWidgetItem, QSpacerItem
@@ -13,6 +15,7 @@ from views import handle_startupinfo
 from views.config import UPLOAD_WIDTH
 from views.confirm_msg_box import ConfirmMsgBox, ConfirmationParams
 from views.dialog import CustomDialogModal
+from views.empty import EmptyView
 from views.pagination_widget import PaginationWidget
 from views.upload_file_item import FileItem
 from views.util import images_path
@@ -129,15 +132,11 @@ class UploadSpace(QFrame):
 
     def create_files_list_view(self):
         self.files_list = QListWidget(self)
-        self.get_list()
-
+        self.empty_view = EmptyView(self.width() - 20, 550, 100, 100)
         self.layout.addWidget(self.files_list)
-
-    def get_download_files(self, list_path='/sdcard/Download'):
-        result = subprocess.run(
-            f'adb -s {self.scrcpy_addr} shell find {list_path} -type f -exec ls -l {'{}'} \\;',
-            **handle_startupinfo())
-        return result.stdout
+        self.files_list.hide()
+        self.layout.addWidget(self.empty_view)
+        self.get_list(get_type='init')
 
     def open_file_dialog(self):
         # 获取当前用户的下载目录
@@ -174,17 +173,34 @@ class UploadSpace(QFrame):
 
             self.get_list('refresh')
 
-    def handle_download_files(self):
-        res_list = self.get_download_files()
+    def handle_download_files(self, res_list, get_type):
         if res_list == '' or res_list is None:
             return []
         pattern = re.compile(r'\s(\d+)\s(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s+(/.+)$', re.MULTILINE)
         matches = pattern.findall(res_list)
         cover_path = os.path.join(self.application_path, 'images', 'flc-file-icon.png')
-        result = [{'size': self.format_size(match[0]), 'date': match[1], 'filename': match[2],
-                   'cover': cover_path} for
-                  match in matches]
-        return result
+        items = [{'size': self.format_size(match[0]), 'date': match[1], 'filename': match[2],
+                  'cover': cover_path} for
+                 match in matches]
+
+        if get_type == 'refresh':
+            self.files_list.clear()
+        self.sum = len(items)
+        self.left_label.setText(f"全部（{self.sum}）")
+        if get_type == 'refresh':
+            self.pagination.set_sum_item(self.sum)
+
+        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
+        if len(items) > 0:
+            self.empty_view.hide()
+            self.files_list.show()
+        # 重新添加项
+        for item in items:
+            item_view = QListWidgetItem(self.files_list)
+            item_widget = FileItem(item_view, item, delete_icon_path)
+            item_widget.remove_item_signal.connect(self.remove_item)
+            item_view.setSizeHint(item_widget.sizeHint())
+            self.files_list.setItemWidget(item_view, item_widget)
 
     @staticmethod
     def format_size(size):
@@ -201,26 +217,12 @@ class UploadSpace(QFrame):
             return f"{size / (1024 * 1024 * 1024 * 1024):.2f}TB"
 
     def get_list(self, get_type='init'):
-        if get_type == 'refresh':
-            self.files_list.clear()
-        items = self.handle_download_files()
-        self.sum = len(items)
-        self.left_label.setText(f"全部（{self.sum}）")
-        if get_type == 'refresh':
-            self.pagination.set_sum_item(self.sum)
-
-        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
-        # 重新添加项
-        for item in items:
-            item_view = QListWidgetItem(self.files_list)
-            item_widget = FileItem(item_view, item, delete_icon_path)
-            item_widget.remove_item_signal.connect(self.remove_item)
-            item_view.setSizeHint(item_widget.sizeHint())
-            self.files_list.setItemWidget(item_view, item_widget)
+        self.get_list_thread = ListWorker(GlobalState().get_device().serial, '/sdcard/Download/', get_type)
+        self.get_list_thread.list_signal.connect(self.handle_download_files)
+        self.get_list_thread.start()
 
     def remove_item(self, item_view: QListWidgetItem, item_delete_btn: QPushButton, filename: str):
         button_position = item_delete_btn.mapToGlobal(item_delete_btn.rect().center())
-        print(button_position)
         message_box = ConfirmMsgBox(self,
                                     ConfirmationParams(position=button_position,
                                                        on_yes=partial(self.remove_item_yes, item_view, filename),
@@ -317,3 +319,26 @@ class UploadSpace(QFrame):
         content_layout.addWidget(label4)
         main_layout.addLayout(content_layout)
         self.main_window.layout().addWidget(self.info_dialog)
+
+
+class ListWorker(QThread):
+    # 定义一个信号，用于在任务完成后更新 GUI
+    list_signal = Signal(str, str)
+
+    def __init__(self, serial, list_path, get_type):
+        super().__init__()
+        self.serial = serial
+        self.list_path = list_path
+        self.get_type = get_type
+
+    def run(self):
+        process = subprocess.Popen(
+            f'adb -s {self.serial} shell find {self.list_path} -type f -exec ls -l {'{}'} \\;',
+            **handle_startupinfo())
+        stdout, stderr = process.communicate()
+        # 打印输出
+        if process.returncode == 0:
+            self.list_signal.emit(stdout, self.get_type)
+        else:
+            print("Error:")
+            self.list_signal.emit("", self.get_type)

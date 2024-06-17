@@ -4,6 +4,8 @@ import time
 
 from PySide6.QtCore import QThread, Signal
 
+from views import handle_startupinfo
+
 
 class AdbPushThread(QThread):
     progress_signal = Signal(int, str)
@@ -24,19 +26,22 @@ class AdbPushThread(QThread):
 
         file_size = os.path.getsize(self.local_path)
         if file_size == 0:
-            self.message_signal.emit("Error: File size is 0. Please check the file path and ensure the file exists.", self.filename)
+            self.message_signal.emit("Error: File size is 0. Please check the file path and ensure the file exists.",
+                                     self.filename)
             return
 
         self.message_signal.emit(f"File size: {file_size} bytes", self.filename)
         pushed_bytes = 0
 
         adb_command = ["adb", "-s", self.serial, "push", self.local_path, self.remote_path]
-        process = subprocess.Popen(adb_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8')
+        process = subprocess.Popen(adb_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                   encoding='utf-8')
 
         start_time = time.time()
 
         while process.poll() is None:
-            result = subprocess.run(["adb", "-s", self.serial, "shell", f"stat -c%s {self.remote_path}"], capture_output=True, text=True, encoding='utf-8')
+            result = subprocess.run(["adb", "-s", self.serial, "shell", f"stat -c%s {self.remote_path}"],
+                                    capture_output=True, text=True, encoding='utf-8')
             if result.returncode == 0:
                 try:
                     pushed_bytes = int(result.stdout.strip())
@@ -53,8 +58,9 @@ class AdbPushThread(QThread):
         process.wait()
 
         if process.returncode == 0:
-            self.message_signal.emit(f"Success: File {self.local_path} has been successfully uploaded to {self.remote_path}.", self.filename)
+            self.message_signal.emit(
+                f"Success: File {self.local_path} has been successfully uploaded to {self.remote_path}.", self.filename)
         else:
             error_message = process.stderr.read().strip()
-            self.message_signal.emit(f"Failed:Failed to upload file {self.local_path}. Error: {error_message}", self.filename)
-
+            self.message_signal.emit(f"Failed:Failed to upload file {self.local_path}. Error: {error_message}",
+                                     self.filename)

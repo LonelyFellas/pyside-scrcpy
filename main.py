@@ -1,9 +1,10 @@
+import asyncio
 import os
 import subprocess
 import sys
 import time
 
-from PySide6.QtCore import QSize, Qt, QPoint, QEvent
+from PySide6.QtCore import QSize, Qt, QPoint, QEvent, QEventLoop
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout
 
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
+        self.create_upload_files()
         self.setStyleSheet("""
             QPushButton#outline_btn_none {
                 border: none;
@@ -366,7 +368,6 @@ class MainWindow(QMainWindow):
 
         for attr in s_attrs:
             space = getattr(self, attr, None)
-            print()
             if space is not None:
                 space.hide()
 
