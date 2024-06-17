@@ -1,13 +1,14 @@
 from PySide6.QtGui import Qt, QMovie
 from PySide6.QtWidgets import QLabel, QFrame
 
+from global_state import GlobalState
 from views.util import images_path
 
 
 class SpinFrame(QFrame):
     def __init__(self, parent=None, width=50, height=50):
         super().__init__(parent)
-        self.application_path = parent.application_path
+        self.application_path = GlobalState().get_root_path()
         self.setFixedSize(parent.size())
         self.setStyleSheet("background-color: rgba(255,255,255,0.4);")
         self._label_width = width

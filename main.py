@@ -1,11 +1,15 @@
+import asyncio
 import os
 import subprocess
 import sys
+import time
 
-from PySide6.QtCore import QSize, Qt, QPoint, QEvent
+from PySide6.QtCore import QSize, Qt, QPoint, QEvent, QEventLoop
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout
 
+from adb import Adbkit
+from global_state import GlobalState
 from views import find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
@@ -31,6 +35,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.scrcpy_addr = scrcpy_addr
+        self.device = GlobalState().get_device()
         self.buttons = []
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
@@ -42,6 +47,7 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
+        self.create_upload_files()
         self.setStyleSheet("""
             QPushButton#outline_btn_none {
                 border: none;
@@ -285,7 +291,6 @@ class MainWindow(QMainWindow):
                 button.setEnabled(False)
                 button.setCursor(QCursor(Qt.ForbiddenCursor))
 
-
     def on_rotate_screen(self):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -304,8 +309,10 @@ class MainWindow(QMainWindow):
         if result.returncode != 0:
             raise RuntimeError(f"Error executing screen rotation command: {result.stderr}")
         else:
-            self.rotation_number = int(query_scrcpy_system_size())
+            self.rotation_number = device.query_system_orientation()
             self.is_vertical_screen = self.rotation_number == 0 or self.rotation_number == 2
+            global_state.set_orientation(self.rotation_number)
+            global_state.set_is_vertical_screen(self.is_vertical_screen)
             embed_window(window.winId(), scrcpy_hwnd, self.is_vertical_screen)
             self.reset_window()
 
@@ -361,7 +368,6 @@ class MainWindow(QMainWindow):
 
         for attr in s_attrs:
             space = getattr(self, attr, None)
-            print()
             if space is not None:
                 space.hide()
 
@@ -405,22 +411,11 @@ class MainWindow(QMainWindow):
         self.app_store_space.show()
         self.app_store_space.raise_()
 
-    def close_proxy_view(self):
-        if self.proxy_space is not None:
-            self.layout.removeWidget(self.proxy_space)
-            self.proxy_space.hide()
-
-    def close_upload_files(self):
-        if self.upload_space is not None:
-            self.layout.removeWidget(self.upload_space)
-            self.upload_space.hide()
-
     def create_proxy_view(self):
         """
         点击代理按钮，显示代理的view
         :return:
         """
-        # self.close_upload_files()
         # 关闭其他展开的扩展的视图
         self.other_close_space('proxy_expend', 'proxy_space')
 
@@ -434,10 +429,9 @@ class MainWindow(QMainWindow):
         点击上传文件按钮
         :return:
         """
-        # self.close_upload_files()
         self.other_close_space('upload_expend', 'upload_space')
         width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
-        self.upload_space = UploadSpace(self, width_window, application_path=application_path, scrcpy_addr=self.scrcpy_addr)
+        self.upload_space = UploadSpace(self, width_window)
         self.upload_space.show()
 
     def open_upload_space_history_dialog(self):
@@ -445,46 +439,34 @@ class MainWindow(QMainWindow):
                                              'history_dialog') and self.upload_space.history_dialog.isVisible()
 
 
-def query_scrcpy_system_size():
-    """
-    获取当前的屏幕是竖屏还是横屏 0，2为竖屏，1，3为横屏
-    :return: str
-    """
-    output_size = subprocess.check_output(
-        ['adb', '-s', scrcpy_addr, 'shell', 'settings', 'get', 'system', 'user_rotation'],
-        creationflags=subprocess.CREATE_NO_WINDOW, shell=True,
-    )
-    try:
-        return output_size.decode('utf-8').strip()
-    except Exception as e:
-        print(f'Error: {e}')
-        return '1'
-
-
 def open_scrcpy() -> int:
-    # """
-    # start a window of scrcpy
-    # 打开scrcpy第三方窗口
-    # :return: int
-    # """
-    # scrcpy_process = subprocess.Popen(
-    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-    #     **handle_startupinfo())
-    # time.sleep(1)
+    """
+    start a window of scrcpy
+    打开scrcpy第三方窗口
+    :return: int
+    """
+    scrcpy_process = subprocess.Popen(
+        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+        **handle_startupinfo())
+    time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        # scrcpy_process.terminate()
+        scrcpy_process.terminate()
         exit(1)
     return hwnd
 
 
 if __name__ == "__main__":
     _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
-    scrcpy_size_num = int(query_scrcpy_system_size())
+    global_state = GlobalState()
+    device = Adbkit(scrcpy_addr)
+    scrcpy_size_num = device.query_system_orientation()
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    # 初始化全球状态
+    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
     scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
