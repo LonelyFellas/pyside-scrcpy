@@ -3,14 +3,15 @@ from collections import deque
 
 from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QSizePolicy, QVBoxLayout
 
+from global_state import GlobalState
 from views.dialog import CustomDialogModal
 from views.upload_progress_item import UploadProgressItem
 
 
 class UploadDialog(CustomDialogModal):
-    def __init__(self, parent=None, items=None, application_path=''):
+    def __init__(self, parent=None):
         super().__init__(x=parent.x() + 10, y=105, width=520, height=310)
-        self.application_path = application_path
+        self.application_path = GlobalState().get_root_path()
         self.main_layout = None
         self.dq_items = deque()
         self.done_quantity = 0

@@ -8,6 +8,7 @@ from PySide6.QtGui import QIcon, QCursor, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout
 
 from adb import Adbkit
+from global_state import GlobalState
 from views import find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
@@ -33,6 +34,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.scrcpy_addr = scrcpy_addr
+        self.device = GlobalState().get_device()
         self.buttons = []
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
@@ -307,6 +309,8 @@ class MainWindow(QMainWindow):
         else:
             self.rotation_number = device.query_system_orientation()
             self.is_vertical_screen = self.rotation_number == 0 or self.rotation_number == 2
+            global_state.set_orientation(self.rotation_number)
+            global_state.set_is_vertical_screen(self.is_vertical_screen)
             embed_window(window.winId(), scrcpy_hwnd, self.is_vertical_screen)
             self.reset_window()
 
@@ -406,22 +410,11 @@ class MainWindow(QMainWindow):
         self.app_store_space.show()
         self.app_store_space.raise_()
 
-    def close_proxy_view(self):
-        if self.proxy_space is not None:
-            self.layout.removeWidget(self.proxy_space)
-            self.proxy_space.hide()
-
-    def close_upload_files(self):
-        if self.upload_space is not None:
-            self.layout.removeWidget(self.upload_space)
-            self.upload_space.hide()
-
     def create_proxy_view(self):
         """
         点击代理按钮，显示代理的view
         :return:
         """
-        # self.close_upload_files()
         # 关闭其他展开的扩展的视图
         self.other_close_space('proxy_expend', 'proxy_space')
 
@@ -435,11 +428,9 @@ class MainWindow(QMainWindow):
         点击上传文件按钮
         :return:
         """
-        # self.close_upload_files()
         self.other_close_space('upload_expend', 'upload_space')
         width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
-        self.upload_space = UploadSpace(self, width_window, application_path=application_path,
-                                        scrcpy_addr=self.scrcpy_addr)
+        self.upload_space = UploadSpace(self, width_window)
         self.upload_space.show()
 
     def open_upload_space_history_dialog(self):
@@ -469,9 +460,12 @@ def open_scrcpy() -> int:
 
 if __name__ == "__main__":
     _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
+    global_state = GlobalState()
     device = Adbkit(scrcpy_addr)
     scrcpy_size_num = device.query_system_orientation()
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    # 初始化全球状态
+    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
     scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)

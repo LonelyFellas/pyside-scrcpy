@@ -8,6 +8,7 @@ from PySide6.QtGui import Qt, QIcon
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFileDialog, \
     QListWidget, QListWidgetItem, QSpacerItem
 
+from global_state import GlobalState
 from views import handle_startupinfo
 from views.config import UPLOAD_WIDTH
 from views.confirm_msg_box import ConfirmMsgBox, ConfirmationParams
@@ -20,9 +21,10 @@ from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
-    def __init__(self, parent=None, width_window=0, application_path='', scrcpy_addr=''):
+    def __init__(self, parent=None, width_window=0):
         super().__init__(parent)
-        self.scrcpy_addr = scrcpy_addr
+        self.scrcpy_addr = GlobalState().get_device().serial
+        self.application_path = GlobalState().get_root_path()
         self.sum = 0
         self.setObjectName("upload_space_frame")
         self.setContentsMargins(0, 0, 0, 0)
@@ -33,7 +35,6 @@ class UploadSpace(QFrame):
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(10, 10, 10, 0)
-        self.application_path = application_path
         # 信息头部
         self.create_top_view()
         self.layout.addItem(spacer)
@@ -44,13 +45,13 @@ class UploadSpace(QFrame):
         # 列表
         self.create_files_list_view()
         # 分页
-        self.pagination = PaginationWidget(application_path=application_path)
+        self.pagination = PaginationWidget()
         self.pagination.set_sum_item(self.sum)
         self.layout.addWidget(self.pagination)
         self.layout.setAlignment(Qt.AlignTop)
 
         self.main_window = self.window()
-        self.history_dialog = UploadDialog(self, self.items, application_path)
+        self.history_dialog = UploadDialog(self)
         self.history_dialog.hide()
 
         self.setStyleSheet("""
