@@ -9,24 +9,14 @@ def find_window_by_title(title: str):
     return hwnd
 
 
-def get_window_rect(hwnd):
-    rect = win32gui.GetWindowRect(hwnd)
-    return rect[2] - rect[0], rect[3] - rect[1]
-
-
-def get_client_rect(hwnd):
-    rect = win32gui.GetClientRect(hwnd)
-    return rect[2] - rect[0], rect[3] - rect[1]
-
-
 def set_window_pos(child_hwnd: int, is_vertical: bool):
     width = 400
-    height = 702
+    height = 710
     top = 0
 
     if not is_vertical:
-        width = 702
-        height = width
+        width = 712
+        height = 400
         top = 50
 
     win32gui.SetWindowPos(child_hwnd, None, 0, top, width, height, win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
