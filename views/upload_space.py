@@ -54,7 +54,7 @@ class UploadSpace(QFrame):
         self.layout.setAlignment(Qt.AlignTop)
 
         self.main_window = self.window()
-        self.history_dialog = UploadDialog(self)
+        self.history_dialog = UploadDialog(self, self.files_list)
         self.history_dialog.hide()
 
         self.setStyleSheet("""

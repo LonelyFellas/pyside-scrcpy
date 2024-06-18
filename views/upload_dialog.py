@@ -1,4 +1,5 @@
 import os
+from typing import List
 from collections import deque
 
 from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QSizePolicy, QVBoxLayout
@@ -9,7 +10,7 @@ from views.upload_progress_item import UploadProgressItem
 
 
 class UploadDialog(CustomDialogModal):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, file_list: List = []):
         super().__init__(x=parent.x() + 10, y=105, width=520, height=310)
         self.application_path = GlobalState().get_root_path()
         self.main_layout = None
@@ -46,6 +47,7 @@ class UploadDialog(CustomDialogModal):
         cover_path = os.path.join(self.application_path, 'images', 'flc-file-icon.png')
         self.dq_items.appendleft({'cover': cover_path, 'filename': filename, 'size': size, 'is_done': False})
         self.get_list('update')
+        self.modify_title(len(self.dq_items), self.done_quantity)
 
     def remove_item(self, item_views: QListWidgetItem, index: int):
         # 删除队列
@@ -84,6 +86,10 @@ class UploadDialog(CustomDialogModal):
             if item_widget is not None:
                 if value == 100:
                     self.dq_items = self.update_at_index_value(index)
+                    self.done_quantity += 1
+                    self.modify_title(len(self.dq_items), self.done_quantity)
+                    self.get_list('update')
+                    item_widget.repaint()
                 item_widget.progress_widget.setValue(value)
 
     def update_at_index_value(self, index):
