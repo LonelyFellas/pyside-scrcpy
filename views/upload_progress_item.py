@@ -14,6 +14,8 @@ class UploadProgressItem(QWidget):
         super().__init__()
         self.item_view = item_view
         self.index = index
+        self.is_done = item.get('is_done', False)
+        print("update")
 
         layout = QHBoxLayout(self)
 
@@ -51,6 +53,9 @@ class UploadProgressItem(QWidget):
             }
         """)
         self.close_icon_btn.setIcon(QIcon(delete_icon_path))
+
+        self.close_icon_btn.hide() if not self.is_done else self.close_icon_btn.show()
+
         right_first_layout.addWidget(self.close_icon_btn)
         right_layout.addLayout(right_first_layout)
 
@@ -67,15 +72,40 @@ class UploadProgressItem(QWidget):
 
         # progress
         self.progress_widget = QProgressBar(self)
-        self.progress_widget.setMinimumHeight(2)
-        self.progress_widget.setMaximumHeight(2)
-        self.progress_widget.setStyleSheet("""
-            color: transparent;
-        """)
+        # self.progress_widget.set
+        self.progress_widget.setMinimumHeight(3)
+        self.progress_widget.setMaximumHeight(3)
         self.progress_widget.setRange(0, 100)
-        self.progress_widget.setValue(100 if item['is_done'] else 0)
+        self.progress_widget.setValue(100 if self.is_done else 0)
+        self.update_progress_bar_color()
         right_layout.addWidget(self.progress_widget)
         layout.addLayout(right_layout)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        self.update_progress_bar_color()
+
+    def update_progress_bar_color(self):
+        if not self.is_done:
+            color = "#05B8CC"  # 上传中的蓝色
+        else:
+            color = "#4CAF50"  # 上传完成的绿色
+
+        self.progress_widget.setStyleSheet(f"""
+            QProgressBar {{
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 7px;
+                text-align: center;
+                color: transparent;
+            }}
+
+            QProgressBar::chunk {{
+                background-color: {color};
+                width: 20px;
+                border-radius: 5px;
+            }}
+            QProgressBar::
+        """)
 
     def remove_at_index_list(self):
         self.remove_item_signal.emit(self.item_view, self.index)
