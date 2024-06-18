@@ -6,11 +6,12 @@ from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QSizePolicy,
 
 from global_state import GlobalState
 from views.dialog import CustomDialogModal
+from views.empty import EmptyView
 from views.upload_progress_item import UploadProgressItem
 
 
 class UploadDialog(CustomDialogModal):
-    def __init__(self, parent=None, file_list: List = []):
+    def __init__(self, parent=None):
         super().__init__(x=parent.x() + 10, y=105, width=520, height=310)
         self.application_path = GlobalState().get_root_path()
         self.main_layout = None
@@ -32,6 +33,8 @@ class UploadDialog(CustomDialogModal):
         self.title = QLabel()
         self.modify_title(len(self.dq_items), self.done_quantity)
         self.main_layout.addWidget(self.title)
+        self.empty_view = EmptyView(self.width() / 2, self.height() / 2 - 80, False, 50, 50, 14)
+        self.main_layout.addWidget(self.empty_view)
         self.create_list_item()
 
     def modify_title(self, sum_quantity=0, done_quantity=0):
@@ -52,10 +55,13 @@ class UploadDialog(CustomDialogModal):
     def remove_item(self, item_views: QListWidgetItem, index: int):
         # 删除队列
         new_dq = deque()
+        done_quantity = 0
         for i, item in enumerate(self.dq_items):
             if i != index:
+                done_quantity += 1
                 new_dq.append(item)
-        self.modify_title(len(new_dq), self.done_quantity)
+        self.done_quantity = done_quantity
+        self.modify_title(len(new_dq), done_quantity)
 
         self.dq_items = new_dq
 
@@ -71,12 +77,18 @@ class UploadDialog(CustomDialogModal):
             self.files_list.clear()
 
         delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
-        for index, item in enumerate(self.dq_items):
-            item_view = QListWidgetItem(self.files_list)
-            item_widget = UploadProgressItem(item_view, item, delete_icon_path, index)
-            item_widget.remove_item_signal.connect(self.remove_item)
-            item_view.setSizeHint(item_widget.sizeHint())
-            self.files_list.setItemWidget(item_view, item_widget)
+        if len(self.dq_items) > 0:
+            for index, item in enumerate(self.dq_items):
+                item_view = QListWidgetItem(self.files_list)
+                item_widget = UploadProgressItem(item_view, item, delete_icon_path, index)
+                item_widget.remove_item_signal.connect(self.remove_item)
+                item_view.setSizeHint(item_widget.sizeHint())
+                self.files_list.setItemWidget(item_view, item_widget)
+                self.files_list.show()
+                self.empty_view.hide()
+        else:
+            self.files_list.hide()
+            self.empty_view.show()
 
     def update_progress_value(self, value: int, filename: str):
         index = self.find_index_by_filename(filename)

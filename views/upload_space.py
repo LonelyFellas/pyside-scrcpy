@@ -1,9 +1,10 @@
 import os
+from queue import Queue
 import re
 import subprocess
 from functools import partial
 
-from PySide6.QtCore import QRect, QSize, Slot, QThread, Signal
+from PySide6.QtCore import QRect, QSize, Slot, QThread, Signal, QTimer
 from PySide6.QtGui import Qt, QIcon
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFileDialog, \
     QListWidget, QListWidgetItem, QSpacerItem
@@ -31,6 +32,8 @@ class UploadSpace(QFrame):
         self.setContentsMargins(0, 0, 0, 0)
         self.setGeometry(width_window, 10, UPLOAD_WIDTH - 10, parent.size().height() - 20)
         self.items = []
+        self.threads = Queue()
+        self.loading = False
 
         spacer = QSpacerItem(0, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.layout = QVBoxLayout(self)
@@ -52,10 +55,8 @@ class UploadSpace(QFrame):
         self.layout.setAlignment(Qt.AlignTop)
 
         self.main_window = self.window()
-        self.history_dialog = UploadDialog(self, self.files_list)
+        self.history_dialog = UploadDialog(self)
         self.history_dialog.hide()
-
-        self.threads = []  # 用于存储线程引用
 
         self.setStyleSheet("""
             #upload_space_frame {
@@ -92,6 +93,7 @@ class UploadSpace(QFrame):
         li2_text = QLabel('⭐ 文件存储位置：Files/Download')
         edit_btn = QPushButton()
         edit_btn.setIcon(QIcon(images_path(self.application_path, 'edit.png')))
+        edit_btn.hide()
         edit_btn.setToolTip("修改储存位置")
         edit_btn.setIconSize(QSize(30, 30))
         edit_btn.setFixedSize(50, 25)
@@ -147,37 +149,38 @@ class UploadSpace(QFrame):
         # 打开文件选择对话框
         files, _ = QFileDialog.getOpenFileNames(self, "Open File", download_dir, "All Files (*)", options=options)
 
-        print(files)
         if files:
-            for file_path in files:
+            for index, file_path in enumerate(files):
                 filename = os.path.basename(file_path)
                 filesize = os.stat(file_path).st_size
                 self.open_upload_dialog()
                 self.history_dialog.push_item(filename, self.format_size(filesize))
-                adb_thread = AdbPushThread(self.scrcpy_addr, local_path=file_path,
-                                           remote_path=f'/sdcard/Download/{filename}', filename=filename)
+                adb_thread = AdbPushThread(self.scrcpy_addr, file_path,
+                                           f'/sdcard/Download/{filename}', filename)
                 adb_thread.progress_signal.connect(self.update_progress)
                 adb_thread.speed_signal.connect(self.update_speed)
                 adb_thread.message_signal.connect(self.show_message)
-                adb_thread.finished.connect(lambda: self.threads.remove(adb_thread))
-                self.threads.append(adb_thread)
+                adb_thread.finished_signal.connect(self.thread_finished)
+                self.threads.put(adb_thread)
                 adb_thread.start()
-        # if file_path:
-        #     filename = os.path.basename(file_path)
-        #     filesize = os.stat(file_path).st_size
-        #     self.open_upload_dialog()
-        #     self.history_dialog.push_item(filename, self.format_size(filesize))
-        #     self.adb_thread = AdbPushThread(self.scrcpy_addr, local_path=file_path,
-        #                                     remote_path=f'/sdcard/Download/{filename}', filename=filename)
-        #     self.adb_thread.progress_signal.connect(self.update_progress)
-        #     self.adb_thread.speed_signal.connect(self.update_speed)
-        #     self.adb_thread.message_signal.connect(self.show_message)
-        #     self.adb_thread.start()
+
+    @Slot()
+    def thread_finished(self, thread: QThread):
+        try:
+            temp_threads = []
+            while not self.threads.empty():
+                t = self.threads.get()
+                if t != thread:
+                    temp_threads.append(t)
+            for t in temp_threads:
+                self.threads.put(t)
+            thread.deleteLater()
+        except Exception as e:
+            print(f"Error in thread_finished: {str(e)}")
 
     @Slot(int, str)
     def update_progress(self, progress, filename):
         self.history_dialog.update_progress_value(progress, filename)
-        print(f'progress: {progress}')
 
     @Slot(float, str)
     def update_speed(self, speed, filename):
@@ -186,9 +189,16 @@ class UploadSpace(QFrame):
     @Slot(str, str)
     def show_message(self, message: str, filename):
         if message.find("Success") != -1:
+            print(self.history_dialog)
             self.history_dialog.update_progress_value(100, filename)
             self.history_dialog.update_speed_value(-1, filename)
 
+            self.recursive_get_list()
+
+    def recursive_get_list(self):
+        if self.loading is True:
+            QTimer.singleShot(1000, self.recursive_get_list)
+        else:
             self.get_list('refresh')
 
     def handle_download_files(self, res_list, get_type):
@@ -234,11 +244,17 @@ class UploadSpace(QFrame):
         else:
             return f"{size / (1024 * 1024 * 1024 * 1024):.2f}TB"
 
+    def get_list_finished(self):
+        self.empty_view.loading_done()
+        self.loading = False
+
     def get_list(self, get_type='init'):
-        self.get_list_thread = ListWorker(GlobalState().get_device().serial, '/sdcard/Download/', get_type)
-        self.get_list_thread.list_signal.connect(self.handle_download_files)
-        self.get_list_thread.finished.connect(self.get_list_finished())
-        self.get_list_thread.start()
+        if self.loading is False:
+            self.get_list_thread = ListWorker(GlobalState().get_device().serial, '/sdcard/Download/', get_type)
+            self.get_list_thread.list_signal.connect(self.handle_download_files)
+            self.get_list_thread.finished.connect(self.get_list_finished)
+            self.get_list_thread.start()
+            self.loading = True
 
     def remove_item(self, item_view: QListWidgetItem, item_delete_btn: QPushButton, filename: str):
         button_position = item_delete_btn.mapToGlobal(item_delete_btn.rect().center())
@@ -248,9 +264,6 @@ class UploadSpace(QFrame):
                                                        on_no=self.remove_item_no, title="删除文件",
                                                        text="确定要删除该文件吗，删除后将不可恢复"))
         message_box.exec_()
-
-    def get_list_finished(self):
-        self.empty_view.loading_done()
 
     def remove_item_yes(self, item: QListWidgetItem, filename: str):
         self.adb_remove_item(filename)

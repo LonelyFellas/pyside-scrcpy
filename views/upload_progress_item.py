@@ -15,7 +15,6 @@ class UploadProgressItem(QWidget):
         self.item_view = item_view
         self.index = index
         self.is_done = item.get('is_done', False)
-        print("update")
 
         layout = QHBoxLayout(self)
 

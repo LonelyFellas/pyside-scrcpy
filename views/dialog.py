@@ -48,6 +48,7 @@ class CustomDialog(QDialog):
         self.frame = QFrame(self)
         self.frame.resize(self.size())
         self.main_layout = QVBoxLayout(self.frame)
+        self.main_layout.setAlignment(Qt.AlignTop)
         self.main_layout.setContentsMargins(10, 10, 10, 10)  # 添加边距以显示阴影效果
         # 设置主布局
         self.setLayout(self.main_layout)

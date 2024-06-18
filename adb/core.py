@@ -4,13 +4,12 @@ import time
 
 from PySide6.QtCore import QThread, Signal
 
-from views import handle_startupinfo
-
 
 class AdbPushThread(QThread):
     progress_signal = Signal(int, str)
     speed_signal = Signal(float, str)
     message_signal = Signal(str, str)
+    finished_signal = Signal(object)
 
     def __init__(self, serial, local_path, remote_path, filename):
         super().__init__()
@@ -60,6 +59,7 @@ class AdbPushThread(QThread):
         if process.returncode == 0:
             self.message_signal.emit(
                 f"Success: File {self.local_path} has been successfully uploaded to {self.remote_path}.", self.filename)
+            self.finished_signal.emit(self)
         else:
             error_message = process.stderr.read().strip()
             self.message_signal.emit(f"Failed:Failed to upload file {self.local_path}. Error: {error_message}",

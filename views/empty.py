@@ -8,7 +8,7 @@ from views.util import images_path
 
 
 class EmptyView(QWidget):
-    def __init__(self, width=0, height=0, loading=True, empty_w=0, empty_h=0):
+    def __init__(self, width=0, height=0, loading=True, empty_w=0, empty_h=0, font_size=18):
         super().__init__()
         layout = QVBoxLayout()
         self.setFixedSize(width, height)
@@ -22,7 +22,7 @@ class EmptyView(QWidget):
         self.placeholder_label.setPixmap(resized_pixmap)
         layout.addWidget(self.placeholder_label)
         empty_label = QLabel("暂无数据")
-        empty_label.setStyleSheet("font-weight: bold; font-size: 18px; color: gray")
+        empty_label.setStyleSheet(f"font-weight: bold; font-size: {font_size}px; color: gray")
         empty_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(empty_label)
         layout.setAlignment(Qt.AlignCenter)
@@ -33,7 +33,7 @@ class EmptyView(QWidget):
 
     def loading_done(self):
         """
-        一般页面线程任务和异步完成后，不需要loading的效果，这里进行停用和隐藏
+        一般页面线程任务或异步完成后，不需要loading的效果，这里进行停用隐藏
         :return:
         """
         if self.loading:
