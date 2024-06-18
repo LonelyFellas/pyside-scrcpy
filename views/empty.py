@@ -32,5 +32,9 @@ class EmptyView(QWidget):
         self.setLayout(layout)
 
     def loading_done(self):
+        """
+        一般页面线程任务和异步完成后，不需要loading的效果，这里进行停用和隐藏
+        :return:
+        """
         if self.loading:
             self.spin_frame.hide()
