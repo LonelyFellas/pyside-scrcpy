@@ -1,6 +1,8 @@
 import win32gui
 import win32con
 
+from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, SCRCPY_WIDTH
+
 
 def find_window_by_title(title: str):
     hwnd = win32gui.FindWindow(None, title)
@@ -10,13 +12,13 @@ def find_window_by_title(title: str):
 
 
 def set_window_pos(child_hwnd: int, is_vertical: bool):
-    width = 400
-    height = 710
+    width = SCRCPY_WIDTH
+    height = HEIGHT_WINDOW
     top = 0
 
     if not is_vertical:
-        width = 712
-        height = 400
+        width = HEIGHT_WINDOW
+        height = SCRCPY_WIDTH
         top = 50
 
     win32gui.SetWindowPos(child_hwnd, None, 0, top, width, height, win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)

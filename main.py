@@ -4,9 +4,9 @@ import subprocess
 import sys
 import time
 
-from PySide6.QtCore import QSize, Qt, QPoint, QEvent, QEventLoop
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
-from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
 from adb import Adbkit
 from global_state import GlobalState
@@ -14,8 +14,9 @@ from views import find_window_by_title, embed_window, handle_startupinfo
 from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
     APP_STORE_WIDTH, \
     WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH, UPLOAD_WIDTH
+from views.control import Control
 from views.upload_space import UploadSpace
-from views.util import images_path
+from views.util import images_path, palette_bg_color
 from views.apk_store_space import ApkStoreSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
@@ -28,7 +29,7 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QWidget):
     expend_attrs = ['app_store_expend', 'proxy_expend', 'upload_expend']
     space_attrs = ['app_store_space', 'proxy_space', 'upload_space']
 
@@ -47,7 +48,6 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
-        self.create_upload_files()
         self.setStyleSheet("""
             QPushButton#outline_btn_none {
                 border: none;
@@ -209,7 +209,7 @@ class MainWindow(QMainWindow):
             "x": rotary_x,
             "y": rotary_y,
             "icon_path": images_path(application_path, 'rotary.png'),
-            "on_click": self.on_rotate_screen,
+            "on_click": None,
         }, {
             "title": "截屏",
             "x": shot_x,
@@ -271,50 +271,39 @@ class MainWindow(QMainWindow):
             "icon_path": images_path(application_path, 'app.png'),
             "on_click": self.on_apk_store
         }]
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignLeft)
+        empty_widget = QFrame()
+        empty_widget.setFixedSize(SCRCPY_WIDTH, HEIGHT_WINDOW)
+        layout.addWidget(empty_widget)
+        control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
+        layout.addWidget(control_widget)
+        self.setLayout(layout)
 
-        for btn in btn_arr:
-            title = btn.get("title")
-            y_btn = btn.get("y")
-            x_btn = btn.get("x")
-            icon_btn = btn.get('icon_path')
-            on_click = btn.get('on_click')
+        # control_widget = Control()
+        # control_widget.setFixedSize(50, HEIGHT_WINDOW)
+        # control_widget.setGeometry(SCRCPY_WIDTH, 0, 50, HEIGHT_WINDOW)
+        # layout.addWidget(control_widget)
 
-            button = QPushButton(title, self)
-            button.setGeometry(x_btn, y_btn, WIDTH_BUTTON, HEIGHT_BUTTON)
-            button.setIcon(QIcon(icon_btn))
-            button.setIconSize(QSize(ICON_SIZE, ICON_SIZE))
-            button.setText(title)  # 设置按钮文字
-            button.clicked.connect(on_click)
-            button.setCursor(QCursor(Qt.PointingHandCursor))
-            self.buttons.append(button)
-            if title == '更多' or title == '应用':
-                button.setEnabled(False)
-                button.setCursor(QCursor(Qt.ForbiddenCursor))
-
-    def on_rotate_screen(self):
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = subprocess.SW_HIDE
-
-        subprocess.run(['adb', '-s', scrcpy_addr, 'shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'],
-                       **handle_startupinfo())
-
-        if self.rotation_number == 3:
-            self.rotation_number = 0
-        else:
-            self.rotation_number += 1
-        command = ["adb", '-s', scrcpy_addr, "shell", "settings", "put", "system", "user_rotation",
-                   f'{self.rotation_number}']
-        result = subprocess.run(command, **handle_startupinfo())
-        if result.returncode != 0:
-            raise RuntimeError(f"Error executing screen rotation command: {result.stderr}")
-        else:
-            self.rotation_number = device.query_system_orientation()
-            self.is_vertical_screen = self.rotation_number == 0 or self.rotation_number == 2
-            global_state.set_orientation(self.rotation_number)
-            global_state.set_is_vertical_screen(self.is_vertical_screen)
-            embed_window(window.winId(), scrcpy_hwnd, self.is_vertical_screen)
-            self.reset_window()
+        # for btn in btn_arr:
+        #     title = btn.get("title")
+        #     y_btn = btn.get("y")
+        #     x_btn = btn.get("x")
+        #     icon_btn = btn.get('icon_path')
+        #     on_click = btn.get('on_click')
+        #
+        #     button = QPushButton(title, self)
+        #     button.setGeometry(x_btn, y_btn, WIDTH_BUTTON, HEIGHT_BUTTON)
+        #     button.setIcon(QIcon(icon_btn))
+        #     button.setIconSize(QSize(ICON_SIZE, ICON_SIZE))
+        #     button.setText(title)  # 设置按钮文字
+        #     button.clicked.connect(on_click)
+        #     button.setCursor(QCursor(Qt.PointingHandCursor))
+        #     self.buttons.append(button)
+        #     if title == '更多' or title == '应用':
+        #         button.setEnabled(False)
+        #         button.setCursor(QCursor(Qt.ForbiddenCursor))
 
     def config_fn(self):
         return {
@@ -460,13 +449,13 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
+    _, scrcpy_title, scrcpy_addr, token, env_id, window_size = sys.argv
     global_state = GlobalState()
     device = Adbkit(scrcpy_addr)
     scrcpy_size_num = device.query_system_orientation()
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
-    # 初始化全球状态
-    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
+    # 初始化全局状态
+    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device, window_size)
     scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
