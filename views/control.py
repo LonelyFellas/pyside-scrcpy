@@ -1,23 +1,41 @@
+from typing import Literal
+
 from PySide6 import QtGui
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QPixmap, QIcon
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QFrame, QPushButton
 
 from global_state import GlobalState
 from views import handle_startupinfo, embed_window
-from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW
+from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW, PROXY_WIDTH
 from views.control_btn_widget import ControlBtnWidget
+from views.proxy_space import ProxySpace
 from views.util import palette_bg_color, images_path, img_label, spacer_item, view_cursor
 
 
 class Control(QWidget):
+    create_sign = Signal(str)
+    screen_shop_sign = Signal()
+    rotation = Signal()
+
     def __init__(self, win_id=0, scrcpy_hwnd=-1):
         super().__init__()
-        self.setFixedSize(WIDTH_WINDOW - SCRCPY_WIDTH, HEIGHT_WINDOW)
+        self.layout = None
+        self.is_vertical_screen = GlobalState().get_is_vertical_screen()
+        if self.is_vertical_screen:
+            self.setFixedSize(
+                WIDTH_WINDOW - SCRCPY_WIDTH, HEIGHT_WINDOW)
+            layout = QVBoxLayout()
+            layout.setAlignment(Qt.AlignTop)
+            layout.setContentsMargins(0, 10, 0, 10)
+        else:
+            self.setFixedSize(HEIGHT_WINDOW,
+                              WIDTH_WINDOW - SCRCPY_WIDTH)
+            layout = QHBoxLayout()
+            layout.setAlignment(Qt.AlignLeft)
+            layout.setContentsMargins(10, 0, 10, 0)
+
         self.device = GlobalState().get_device()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 10, 0, 10)
-        layout.setAlignment(Qt.AlignTop)
         palette_bg_color(self, color='#d5d8e1')
 
         btn_arr = [{
@@ -27,11 +45,11 @@ class Control(QWidget):
         }, {
             "title": "截屏",
             "icon": 'screen-shot.png',
-            # "on_click": self.on_screen_shop
+            "on_click": lambda: self.screen_shop_sign.emit()
         }, {
             "title": "上传",
             "icon": 'file-upload.png',
-            # "on_click": self.create_upload_files
+            "on_click": lambda: self.create_view('upload_space')
         }, {
             "title": "音量",
             "icon": 'volume-up.png',
@@ -43,7 +61,7 @@ class Control(QWidget):
         }, {
             "title": "代理",
             "icon": 'speed.png',
-            # "on_click": self.create_proxy_view
+            "on_click": lambda: self.create_view('proxy_space')
         }, {
             "title": "更多",
             "icon": 'more.png',
@@ -63,41 +81,33 @@ class Control(QWidget):
         }, {
             "title": "应用",
             "icon": 'app.png',
-            # "on_click": self.on_apk_store
+            "on_click": None
         }]
         for index, btn in enumerate(btn_arr):
             btn_widget = ControlBtnWidget(self, btn)
-            view_cursor(btn_widget)
 
             if index == 7:
-                layout.addSpacing(60)
-            if len(btn_arr) - 1 == index:
+                layout.addSpacing(50 if self.is_vertical_screen else 20)
+            elif index == 8 or index == 9:
+                layout.addSpacing(0)
+            elif len(btn_arr) - 1 == index:
                 layout.addStretch(60)
+            elif index != 0:
+                layout.addSpacing(5)
             layout.addWidget(btn_widget)
 
-        self.setLayout(layout)
+            self.setLayout(layout)
+
+    def create_view(self, create_type: Literal['proxy_space', 'upload_space']):
+        self.create_sign.emit(create_type)
 
     def on_keyevent(self, keycode):
         self.device.shell(['input', 'keyevent', keycode])
 
-    def reset_window(self):
-        """
-        清空所有视图，并回到起始窗口
-        :return:
-        """
-        print()
-        # for button in self.buttons:
-        #     button.deleteLater()
-        #
-        # self.close_space(self.expend_attrs, self.space_attrs)
-        # self.buttons.clear()
-        # self.update_ui()
-        # self.show()
-
     def on_rotate_screen(self, win_id, scrcpy_hwnd):
         self.device.shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
 
-        rotation_num = GlobalState().get_rotation_num()
+        rotation_num = GlobalState().get_orientation()
         if rotation_num == 3:
             rotation_num = 0
         else:
@@ -112,4 +122,4 @@ class Control(QWidget):
             GlobalState().set_orientation(rotation_num)
             GlobalState().set_is_vertical_screen(is_vertical_screen)
             embed_window(win_id, scrcpy_hwnd, is_vertical_screen)
-            self.reset_window()
+            self.rotation.emit()

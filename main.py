@@ -1,26 +1,23 @@
-import asyncio
+from typing import Literal, Optional
 import os
 import subprocess
 import sys
 import time
 
-from PySide6.QtCore import QSize, Qt
+import shiboken6
+from PySide6.QtCore import QSize, Qt, Slot
 from PySide6.QtGui import QIcon, QCursor, QKeyEvent
 from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
 from adb import Adbkit
 from global_state import GlobalState
 from views import find_window_by_title, embed_window, handle_startupinfo
-from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, WIDTH_BUTTON, HEIGHT_BUTTON, ICON_SIZE, SCRCPY_WIDTH, \
-    APP_STORE_WIDTH, \
-    WIDTH_WINDOW_V, HEIGHT_WINDOW_V, TOP_V, PROXY_WIDTH, UPLOAD_WIDTH
+from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, SCRCPY_WIDTH, EXPEND_WIDTH
 from views.control import Control
 from views.upload_space import UploadSpace
-from views.util import images_path, palette_bg_color
-from views.apk_store_space import ApkStoreSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
-from views.win_event import desktop_to_android_keycode
+from views.util import palette_bg_color
 
 # 获取应用程序运行目录或打包后的临时目录
 if hasattr(sys, '_MEIPASS'):
@@ -30,8 +27,7 @@ else:
 
 
 class MainWindow(QWidget):
-    expend_attrs = ['app_store_expend', 'proxy_expend', 'upload_expend']
-    space_attrs = ['app_store_space', 'proxy_space', 'upload_space']
+    space_attrs = ['proxy_space', 'upload_space']
 
     def __init__(self):
         super().__init__()
@@ -40,10 +36,19 @@ class MainWindow(QWidget):
         self.buttons = []
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
-        self.app_store_space = None
+
         self.proxy_space = None
         self.upload_space = None
+        self.last_expend_space = ''
+        self.layout = None
+        self.left_layout = None
+        self.empty_widget = None
+        self.control_widget = None
+
+        self.app_store_space = None
+
         self.setWindowTitle(scrcpy_title)
+        self.layout = QHBoxLayout()
         self.update_ui()
         self.app_store_expend = False
         self.proxy_expend = False
@@ -168,260 +173,131 @@ class MainWindow(QWidget):
             print(f"未映射的键码: {keycode}")
 
     def on_screen_shop(self):
+
         dialog = DialogScreenShot(self, scrcpy_addr)
         dialog.exec()
 
+    def clear_layout(self):
+        if self.is_vertical_screen:
+            print("竖屏")
+            self.layout.removeWidget(self.empty_widget)
+            self.layout.removeWidget(self.control_widget)
+
+            self.empty_widget.deleteLater()
+            self.control_widget.deleteLater()
+            self.empty_widget = None
+            self.control_widget = None
+
+            self.remove_item_from_layout()
+        else:
+            self.left_layout.removeWidget(self.control_widget)
+
+            self.empty_widget.deleteLater()
+            self.control_widget.deleteLater()
+            self.empty_widget = None
+            self.control_widget = None
+
+            self.layout.removeItem(self.left_layout)
+            self.left_layout.deleteLater()
+            self.left_layout = None
+            self.remove_item_from_layout()
+
     def update_ui(self):
-        (width_window,
-         height_window,
-         rotary_x,
-         rotary_y,
-         shot_x, shot_y,
-         upload_x,
-         upload_y,
-         v_up_x,
-         v_up_y,
-         v_down_x,
-         v_down_y,
-         speed_x,
-         speed_y,
-         more_x,
-         more_y,
-         back_x,
-         back_y,
-         main_x,
-         main_y,
-         all_x,
-         all_y,
-         app_x,
-         app_y) = self.config_fn().values()
+
+        self.is_vertical_screen = GlobalState().get_is_vertical_screen()
+        width_window = WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW
+        height_window = HEIGHT_WINDOW if self.is_vertical_screen else WIDTH_WINDOW
         screen = QApplication.primaryScreen().availableGeometry()
         x = (screen.width() - width_window) // 2
         y = (screen.height() - height_window) // 2
 
         # 禁用最大化按钮和拉伸功能
-        self.setWindowFlags(Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowCloseButtonHint)
         self.setFixedSize(width_window, height_window)
         self.setGeometry(x, y, width_window, height_window)
 
-        btn_arr = [{
-            "title": "旋转",
-            "x": rotary_x,
-            "y": rotary_y,
-            "icon_path": images_path(application_path, 'rotary.png'),
-            "on_click": None,
-        }, {
-            "title": "截屏",
-            "x": shot_x,
-            "y": shot_y,
-            "icon_path": images_path(application_path, 'screen-shot.png'),
-            "on_click": self.on_screen_shop
-        }, {
-            "title": "上传",
-            "x": upload_x,
-            "y": upload_y,
-            "icon_path": images_path(application_path, 'file-upload.png'),
-            "on_click": self.create_upload_files
-        }, {
-            "title": "音量",
-            "x": v_up_x,
-            "y": v_up_y,
-            "icon_path": images_path(application_path, 'volume-up.png'),
-            "on_click": lambda: self.on_keyevent('KEYCODE_VOLUME_UP')
-        }, {
-            "title": "音量",
-            "x": v_down_x,
-            "y": v_down_y,
-            "icon_path": images_path(application_path, 'volume-down.png'),
-            "on_click": lambda: self.on_keyevent('KEYCODE_VOLUME_DOWN')
-        }, {
-            "title": "代理",
-            "x": speed_x,
-            "y": speed_y,
-            "icon_path": images_path(application_path, 'speed.png'),
-            "on_click": self.create_proxy_view
-        }, {
-            "title": "更多",
-            "x": more_x,
-            "y": more_y,
-            "icon_path": images_path(application_path, 'more.png'),
-            "on_click": None
-        }, {
-            "title": "",
-            "x": back_x,
-            "y": back_y,
-            "icon_path": images_path(application_path, 'latest-up.png'),
-            "on_click": lambda: self.on_keyevent('4')
-        }, {
-            "title": "",
-            "x": main_x,
-            "y": main_y,
-            "icon_path": images_path(application_path, 'main-menu.png'),
-            "on_click": lambda: self.on_keyevent('3')
-        }, {
-            "title": "",
-            "x": all_x,
-            "y": all_y,
-            "icon_path": images_path(application_path, 'all-process.png'),
-            "on_click": lambda: self.on_keyevent('187')
-        }, {
-            "title": "应用",
-            "x": app_x,
-            "y": app_y,
-            "icon_path": images_path(application_path, 'app.png'),
-            "on_click": self.on_apk_store
-        }]
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setAlignment(Qt.AlignLeft)
-        empty_widget = QFrame()
-        empty_widget.setFixedSize(SCRCPY_WIDTH, HEIGHT_WINDOW)
-        layout.addWidget(empty_widget)
-        control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
-        layout.addWidget(control_widget)
-        self.setLayout(layout)
+        if not self.is_vertical_screen:  # 横屏
+            self.left_layout = QVBoxLayout()
+            self.left_layout.setContentsMargins(0, 0, 0, 0)
+            self.left_layout.setSpacing(0)
+            self.left_layout.setAlignment(Qt.AlignTop)
 
-        # control_widget = Control()
-        # control_widget.setFixedSize(50, HEIGHT_WINDOW)
-        # control_widget.setGeometry(SCRCPY_WIDTH, 0, 50, HEIGHT_WINDOW)
-        # layout.addWidget(control_widget)
+            self.control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
+            self.left_layout.addWidget(self.control_widget)
+            self.empty_widget = QFrame()
+            self.empty_widget.setFixedSize(HEIGHT_WINDOW, SCRCPY_WIDTH)
+            self.left_layout.addWidget(self.empty_widget)
+            self.layout.addLayout(self.left_layout)
+        else:  # 竖屏
+            self.empty_widget = QFrame()
+            self.empty_widget.setFixedSize(SCRCPY_WIDTH, HEIGHT_WINDOW)
+            self.layout.addWidget(self.empty_widget)
+            self.control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
+            self.layout.addWidget(self.control_widget)
 
-        # for btn in btn_arr:
-        #     title = btn.get("title")
-        #     y_btn = btn.get("y")
-        #     x_btn = btn.get("x")
-        #     icon_btn = btn.get('icon_path')
-        #     on_click = btn.get('on_click')
-        #
-        #     button = QPushButton(title, self)
-        #     button.setGeometry(x_btn, y_btn, WIDTH_BUTTON, HEIGHT_BUTTON)
-        #     button.setIcon(QIcon(icon_btn))
-        #     button.setIconSize(QSize(ICON_SIZE, ICON_SIZE))
-        #     button.setText(title)  # 设置按钮文字
-        #     button.clicked.connect(on_click)
-        #     button.setCursor(QCursor(Qt.PointingHandCursor))
-        #     self.buttons.append(button)
-        #     if title == '更多' or title == '应用':
-        #         button.setEnabled(False)
-        #         button.setCursor(QCursor(Qt.ForbiddenCursor))
-
-    def config_fn(self):
-        return {
-            "width_window": WIDTH_WINDOW if self.is_vertical_screen else WIDTH_WINDOW_V,
-            "height_window": HEIGHT_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW_V,
-            "rotary_x": SCRCPY_WIDTH if self.is_vertical_screen else 10,
-            "rotary_y": 10 if self.is_vertical_screen else TOP_V,
-            'shot_x': SCRCPY_WIDTH if self.is_vertical_screen else 70,
-            'shot_y': 50 if self.is_vertical_screen else TOP_V,
-            "upload_x": SCRCPY_WIDTH if self.is_vertical_screen else 130,
-            "upload_y": 90 if self.is_vertical_screen else TOP_V,
-            'v_up_x': SCRCPY_WIDTH if self.is_vertical_screen else 190,
-            'v_up_y': 130 if self.is_vertical_screen else TOP_V,
-            'v_down_x': SCRCPY_WIDTH if self.is_vertical_screen else 250,
-            'v_down_y': 170 if self.is_vertical_screen else TOP_V,
-            'speed_x': SCRCPY_WIDTH if self.is_vertical_screen else 310,
-            'speed_y': 210 if self.is_vertical_screen else TOP_V,
-            'more_x': SCRCPY_WIDTH if self.is_vertical_screen else 370,
-            'more_y': 250 if self.is_vertical_screen else TOP_V,
-            'back_x': SCRCPY_WIDTH if self.is_vertical_screen else 450,
-            'back_y': 350 if self.is_vertical_screen else TOP_V,
-            'main_x': SCRCPY_WIDTH if self.is_vertical_screen else 510,
-            'main_y': 390 if self.is_vertical_screen else TOP_V,
-            'all_x': SCRCPY_WIDTH if self.is_vertical_screen else 570,
-            'all_y': 430 if self.is_vertical_screen else TOP_V,
-            'app_x': SCRCPY_WIDTH if self.is_vertical_screen else 653,
-            'app_y': 660 if self.is_vertical_screen else TOP_V
-        }
-
-    def on_key_press(self, event):
-        command = ["adb", '-s', self.scrcpy_addr, "shell", "input", 'keyevent',
-                   f'{desktop_to_android_keycode.get(event.keycode)}']
-        subprocess.run(command, **handle_startupinfo())
-
-    def on_keyevent(self, keycode):
-        command = ["adb", '-s', self.scrcpy_addr, "shell", "input", 'keyevent', keycode]
-        subprocess.run(command, **handle_startupinfo())
-
-    def other_close_space(self, expend_attr, space_attr):
-        # Exclude the specified expend_attr and space_attr
-        other_expend_attrs = [attr for attr in self.expend_attrs if attr != expend_attr]
-        other_space_attrs = [attr for attr in self.space_attrs if attr != space_attr]
-
-        self.close_space(other_expend_attrs, other_space_attrs)
-
-        setattr(self, expend_attr, not getattr(self, expend_attr, False))
-
-    def close_space(self, e_attrs, s_attrs):
-        for attr in e_attrs:
-            setattr(self, attr, False)
-
-        for attr in s_attrs:
-            space = getattr(self, attr, None)
-            if space is not None:
-                space.hide()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        self.layout.setAlignment(Qt.AlignLeft)
+        self.control_widget.create_sign.connect(self.expend_main_view)
+        self.control_widget.screen_shop_sign.connect(self.on_screen_shop)
+        self.control_widget.rotation.connect(self.reset_window)
+        self.setLayout(self.layout)
 
     def reset_window(self):
-        """
-        清空所有视图，并回到起始窗口
-        :return:
-        """
-        for button in self.buttons:
-            button.deleteLater()
-
-        self.close_space(self.expend_attrs, self.space_attrs)
-        self.buttons.clear()
+        self.clear_layout()
         self.update_ui()
-        self.show()
+        self.last_expend_space = ''
 
-    def expend_window_size(self, expend_width=0, expend_bool=False):
-        # 以下几行是对spk_store组件展开或者不展开窗口大小的计算
-        size = self.size()
-        height = size.height()
-        width_window = self.config_fn().get('width_window')
-        height_window = self.config_fn().get('height_window')
-        app_store_width_window = width_window + (expend_width if expend_bool else 0)
-        height_apk = height if self.is_vertical_screen else (702 if expend_bool else height_window)
-        self.setFixedSize(app_store_width_window, height_apk)
+    def is_not_expend(self):
+        return self.width() == (WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW)
 
-        return width_window
+    def expend_window(self):
+        if self.is_vertical_screen:
+            self.setFixedSize(
+                WIDTH_WINDOW + EXPEND_WIDTH if self.is_not_expend() else WIDTH_WINDOW,
+                HEIGHT_WINDOW
+            )
+        else:
+            self.setFixedSize(
+                HEIGHT_WINDOW + EXPEND_WIDTH if self.is_not_expend() else HEIGHT_WINDOW,
+                HEIGHT_WINDOW if self.is_not_expend() else WIDTH_WINDOW
+            )
 
-    def on_apk_store(self):
-        self.other_close_space('app_store_expend', 'app_store_space')
+    def remove_widget_from_layout(self, widget_str=''):
+        widget = getattr(self, widget_str, None)
 
-        width_window = self.expend_window_size(APP_STORE_WIDTH, self.app_store_expend)
+        if widget is not None:
+            self.layout.removeWidget(widget)
+            widget.hide()
+            setattr(self, widget_str, None)
 
-        # 如果是不展开的，限免的ApkStoreSpace将不在进行渲染，直接return
-        if not self.app_store_expend and self.app_store_space is not None:
-            self.app_store_space.hide()
+    def remove_item_from_layout(self, widget_str: Optional[str] = None):
+        space_attrs = [attr for attr in self.space_attrs if
+                       attr != widget_str] if widget_str is not None else self.space_attrs
+
+        for space_str in space_attrs:
+            widget = getattr(self, space_str)
+            if widget is not None:
+                self.layout.removeWidget(widget)
+                widget.hide()
+                setattr(self, space_str, None)
+
+    @Slot(str)
+    def expend_main_view(self, create_type: Literal['proxy_space', 'upload_space']):
+        if self.last_expend_space == '' or self.last_expend_space == create_type:
+            self.expend_window()
+
+        if not self.is_not_expend():
+            self.remove_item_from_layout(create_type)
+            if create_type == 'proxy_space':
+                self.proxy_space = ProxySpace(self)
+                self.layout.addWidget(self.proxy_space)
+            else:
+                self.upload_space = UploadSpace(self)
+                self.layout.addWidget(self.upload_space)
+            self.last_expend_space = create_type
             return
-
-        # 设置小部件的布局
-        self.app_store_space = ApkStoreSpace(self, width_window, application_path, token)
-        self.app_store_space.show()
-        self.app_store_space.raise_()
-
-    def create_proxy_view(self):
-        """
-        点击代理按钮，显示代理的view
-        :return:
-        """
-        # 关闭其他展开的扩展的视图
-        self.other_close_space('proxy_expend', 'proxy_space')
-
-        width_window = self.expend_window_size(PROXY_WIDTH, self.proxy_expend)
-        # 设置小部件的布局
-        self.proxy_space = ProxySpace(self, width_window, application_path=application_path, token=token, env_id=env_id)
-        self.proxy_space.show()
-
-    def create_upload_files(self):
-        """
-        点击上传文件按钮
-        :return:
-        """
-        self.other_close_space('upload_expend', 'upload_space')
-        width_window = self.expend_window_size(UPLOAD_WIDTH, self.upload_expend)
-        self.upload_space = UploadSpace(self, width_window)
-        self.upload_space.show()
+        self.last_expend_space = ''
+        self.remove_widget_from_layout(create_type)
 
     def open_upload_space_history_dialog(self):
         return self.upload_space and hasattr(self.upload_space,

@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
 
 from global_state import GlobalState
 from views import handle_startupinfo
-from views.config import UPLOAD_WIDTH
+from views.config import UPLOAD_WIDTH, EXPEND_WIDTH, HEIGHT_WINDOW
 from views.confirm_msg_box import ConfirmMsgBox, ConfirmationParams
 from views.dialog import CustomDialogModal
 from views.empty import EmptyView
@@ -30,7 +30,7 @@ class UploadSpace(QFrame):
         self.sum = 0
         self.setObjectName("upload_space_frame")
         self.setContentsMargins(0, 0, 0, 0)
-        self.setGeometry(width_window, 10, UPLOAD_WIDTH - 10, parent.size().height() - 20)
+        self.setFixedSize(EXPEND_WIDTH, HEIGHT_WINDOW)
         self.items = []
         self.threads = Queue()
         self.loading = False

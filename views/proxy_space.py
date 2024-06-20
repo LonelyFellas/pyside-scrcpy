@@ -1,18 +1,11 @@
-import dataclasses
-import os
-import time
-
-from dataclasses import field
 from functools import partial
 
-from typing import Optional
-
-from PySide6.QtCore import QSize, Slot, QThread
-from PySide6.QtGui import QIcon, Qt
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
-    QHeaderView, QVBoxLayout, QMessageBox
+    QHeaderView, QVBoxLayout
 
-from views.config import PROXY_WIDTH
+from global_state import GlobalState
+from views.config import EXPEND_WIDTH, HEIGHT_WINDOW
 from views.confirm_msg_box import ConfirmationParams, ConfirmMsgBox
 from views.pagination_widget import PaginationWidget
 from views.spin_label import SpinFrame
@@ -27,13 +20,12 @@ PROXY_MAPPING = {
 
 
 class ProxySpace(QFrame):
-    def __init__(self, parent=None, width_window=0, application_path='', token='', env_id=2):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.setGeometry(width_window, 10, PROXY_WIDTH - 10, parent.size().height() - 20)
-        self.token = token
-        self.env_id = env_id
-        self.application_path = application_path
+        self.setFixedSize(EXPEND_WIDTH, HEIGHT_WINDOW)
+        self.token = GlobalState().get_token()
+        self.env_id = GlobalState().get_env_id()
+        self.application_path = GlobalState().get_root_path()
 
         self.top_layout = None
         self.bottom_layout = None
@@ -54,7 +46,7 @@ class ProxySpace(QFrame):
         # Table
         self.table = QTableWidget(0, 3)
         self.table.setContentsMargins(0, 0, 0, 0)
-        self.table.setFixedSize(520, 585)
+        self.table.setFixedSize(520, 493)
 
         self.table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)

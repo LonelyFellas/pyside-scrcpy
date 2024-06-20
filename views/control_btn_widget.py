@@ -2,9 +2,10 @@ from typing import Dict
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QGraphicsOpacityEffect
+import shiboken6  # 导入 shiboken6 模块
 
 from views.config import WIDTH_WINDOW, SCRCPY_WIDTH
-from views.util import img_label
+from views.util import img_label, view_cursor
 
 
 class ControlBtnWidget(QFrame):
@@ -14,7 +15,13 @@ class ControlBtnWidget(QFrame):
             btn = {}
         self.btn = btn
         self.setFixedSize(WIDTH_WINDOW - SCRCPY_WIDTH, 35)
-        self.setObjectName('control_btn')
+        if btn['on_click'] is None:
+            self.opacity_effect = QGraphicsOpacityEffect()
+            self.setGraphicsEffect(self.opacity_effect)
+            self.opacity_effect.setOpacity(0.3)
+        else:
+            self.setObjectName('control_btn')
+            view_cursor(self)
         self.setMouseTracking(True)  # 启用鼠标跟踪
 
         btn_layout = QVBoxLayout(self)
@@ -48,20 +55,24 @@ class ControlBtnWidget(QFrame):
         """)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and self.btn['on_click'] is not None:
             self.opacity_effect = QGraphicsOpacityEffect()
             self.setGraphicsEffect(self.opacity_effect)
             self.opacity_effect.setOpacity(0.7)
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and self.btn['on_click'] is not None:
             if self.rect().contains(event.pos()):
-                # 触发点击事件
-                if self.btn.get('on_click') is not None:
-                    self.btn.get('on_click')()
-
                 self.opacity_effect = QGraphicsOpacityEffect()
                 self.setGraphicsEffect(self.opacity_effect)
                 self.opacity_effect.setOpacity(1)
+
+                # 为什么把是super在这里执行呢，因为onclick执行了delete操作，同步操作导致后面super堆内存被删除，控制台报异常
+                super().mouseReleaseEvent(event)
+                # 触发点击事件
+                if self.btn.get('on_click') is not None:
+                    self.btn.get('on_click')()
+                    return
+
         super().mouseReleaseEvent(event)

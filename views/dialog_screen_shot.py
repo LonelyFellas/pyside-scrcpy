@@ -17,7 +17,7 @@ class DialogScreenShot(QDialog):
         self.is_open_save_file_dialog = False
         self.setWindowFlag(Qt.FramelessWindowHint | Qt.Dialog)
         self.setModal(True)
-        self.setGeometry(parent.x() + WIDTH_WINDOW + 10, parent.y() + 30, 170, 333)
+        self.setGeometry(parent.x() + WIDTH_WINDOW + 10, parent.y() + 30, 100, 196)
 
         layout = QVBoxLayout(self)
 
@@ -33,7 +33,7 @@ class DialogScreenShot(QDialog):
 
         # 添加下载按钮
         self.download_btn = QPushButton("保存", self)
-        self.download_btn.setFixedSize(120, 30)
+        self.download_btn.setFixedSize(80, 25)
         self.download_btn.setIcon(QIcon("./images/file-upload.png"))
         self.download_btn.clicked.connect(self.download_image)
         button_layout.addWidget(self.download_btn, alignment=Qt.AlignmentFlag.AlignCenter)
