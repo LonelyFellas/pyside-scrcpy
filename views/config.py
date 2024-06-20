@@ -10,5 +10,6 @@ ICON_SIZE = 24  # 操作栏按钮的图标尺寸
 APP_STORE_WIDTH = 450  # app_store 容器大小
 PROXY_WIDTH = 550  # 代理 容器大小
 UPLOAD_WIDTH = 550  # 上传文件 容器大小
+EXPEND_WIDTH = 540
 
 API_URL = 'http://maiku.npaas.cn/s/api/'  # api地址

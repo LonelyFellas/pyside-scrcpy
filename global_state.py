@@ -40,7 +40,7 @@ class GlobalState:
         return self._root_path
 
     def get_window_size(self):
-        return self._size
+        return self._window_size
 
     def get_orientation(self):
         return self._orientation
