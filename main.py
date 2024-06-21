@@ -379,16 +379,16 @@ def open_scrcpy() -> int:
     打开scrcpy第三方窗口
     :return: int
     """
-    scrcpy_process = subprocess.Popen(
-        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-        **handle_startupinfo())
-    time.sleep(1)
+    # scrcpy_process = subprocess.Popen(
+    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+    #     **handle_startupinfo())
+    # time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        scrcpy_process.terminate()
+        # scrcpy_process.terminate()
         exit(1)
     return hwnd
 
