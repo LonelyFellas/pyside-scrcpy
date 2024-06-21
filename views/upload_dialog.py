@@ -33,7 +33,7 @@ class UploadDialog(CustomDialogModal):
         self.title = QLabel()
         self.modify_title(len(self.dq_items), self.done_quantity)
         self.main_layout.addWidget(self.title)
-        self.empty_view = EmptyView(self.width() / 2, self.height() / 2 - 80, False, 50, 50, 14)
+        self.empty_view = EmptyView(self.width() / 2, self.height() / 2 - 140, False, 50, 50, 14)
         self.main_layout.addWidget(self.empty_view)
         self.create_list_item()
 

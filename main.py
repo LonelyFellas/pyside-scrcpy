@@ -4,10 +4,9 @@ import subprocess
 import sys
 import time
 
-import shiboken6
-from PySide6.QtCore import QSize, Qt, Slot
-from PySide6.QtGui import QIcon, QCursor, QKeyEvent
-from PySide6.QtWidgets import QMainWindow, QApplication, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QFrame
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
 from adb import Adbkit
 from global_state import GlobalState
@@ -17,7 +16,6 @@ from views.control import Control
 from views.upload_space import UploadSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
-from views.util import palette_bg_color
 
 # 获取应用程序运行目录或打包后的临时目录
 if hasattr(sys, '_MEIPASS'):
