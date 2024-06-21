@@ -26,7 +26,7 @@ else:
     application_path = os.path.dirname(os.path.abspath(__file__))
 
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     space_attrs = ['proxy_space', 'upload_space']
 
     def __init__(self):
@@ -40,7 +40,7 @@ class MainWindow(QWidget):
         self.proxy_space = None
         self.upload_space = None
         self.last_expend_space = ''
-        self.layout = None
+        self.m_layout = None
         self.left_layout = None
         self.empty_widget = None
         self.control_widget = None
@@ -48,7 +48,9 @@ class MainWindow(QWidget):
         self.app_store_space = None
 
         self.setWindowTitle(scrcpy_title)
-        self.layout = QHBoxLayout()
+        self.central_widget = QWidget(self)
+        self.setCentralWidget(self.central_widget)
+        self.m_layout = QHBoxLayout()
         self.update_ui()
         self.app_store_expend = False
         self.proxy_expend = False
@@ -180,8 +182,8 @@ class MainWindow(QWidget):
     def clear_layout(self):
         if self.is_vertical_screen:
             print("竖屏")
-            self.layout.removeWidget(self.empty_widget)
-            self.layout.removeWidget(self.control_widget)
+            self.m_layout.removeWidget(self.empty_widget)
+            self.m_layout.removeWidget(self.control_widget)
 
             self.empty_widget.deleteLater()
             self.control_widget.deleteLater()
@@ -197,7 +199,7 @@ class MainWindow(QWidget):
             self.empty_widget = None
             self.control_widget = None
 
-            self.layout.removeItem(self.left_layout)
+            self.m_layout.removeItem(self.left_layout)
             self.left_layout.deleteLater()
             self.left_layout = None
             self.remove_item_from_layout()
@@ -226,21 +228,21 @@ class MainWindow(QWidget):
             self.empty_widget = QFrame()
             self.empty_widget.setFixedSize(HEIGHT_WINDOW, SCRCPY_WIDTH)
             self.left_layout.addWidget(self.empty_widget)
-            self.layout.addLayout(self.left_layout)
+            self.m_layout.addLayout(self.left_layout)
         else:  # 竖屏
             self.empty_widget = QFrame()
             self.empty_widget.setFixedSize(SCRCPY_WIDTH, HEIGHT_WINDOW)
-            self.layout.addWidget(self.empty_widget)
+            self.m_layout.addWidget(self.empty_widget)
             self.control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
-            self.layout.addWidget(self.control_widget)
+            self.m_layout.addWidget(self.control_widget)
 
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
-        self.layout.setAlignment(Qt.AlignLeft)
+        self.m_layout.setContentsMargins(0, 0, 0, 0)
+        self.m_layout.setSpacing(0)
+        self.m_layout.setAlignment(Qt.AlignLeft)
         self.control_widget.create_sign.connect(self.expend_main_view)
         self.control_widget.screen_shop_sign.connect(self.on_screen_shop)
         self.control_widget.rotation.connect(self.reset_window)
-        self.setLayout(self.layout)
+        self.central_widget.setLayout(self.m_layout)
 
     def reset_window(self):
         self.clear_layout()
@@ -266,7 +268,7 @@ class MainWindow(QWidget):
         widget = getattr(self, widget_str, None)
 
         if widget is not None:
-            self.layout.removeWidget(widget)
+            self.m_layout.removeWidget(widget)
             widget.hide()
             setattr(self, widget_str, None)
 
@@ -277,7 +279,7 @@ class MainWindow(QWidget):
         for space_str in space_attrs:
             widget = getattr(self, space_str)
             if widget is not None:
-                self.layout.removeWidget(widget)
+                self.m_layout.removeWidget(widget)
                 widget.hide()
                 setattr(self, space_str, None)
 
@@ -290,10 +292,10 @@ class MainWindow(QWidget):
             self.remove_item_from_layout(create_type)
             if create_type == 'proxy_space':
                 self.proxy_space = ProxySpace(self)
-                self.layout.addWidget(self.proxy_space)
+                self.m_layout.addWidget(self.proxy_space)
             else:
                 self.upload_space = UploadSpace(self)
-                self.layout.addWidget(self.upload_space)
+                self.m_layout.addWidget(self.upload_space)
             self.last_expend_space = create_type
             return
         self.last_expend_space = ''
@@ -325,13 +327,13 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    _, scrcpy_title, scrcpy_addr, token, env_id, window_size = sys.argv
+    _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
     global_state = GlobalState()
     device = Adbkit(scrcpy_addr)
     scrcpy_size_num = device.query_system_orientation()
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
     # 初始化全局状态
-    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device, window_size)
+    global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
     scrcpy_hwnd = open_scrcpy()
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)

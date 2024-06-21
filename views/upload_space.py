@@ -23,7 +23,7 @@ from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
-    def __init__(self, parent=None, width_window=0):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.scrcpy_addr = GlobalState().get_device().serial
         self.application_path = GlobalState().get_root_path()
@@ -215,8 +215,7 @@ class UploadSpace(QFrame):
             self.files_list.clear()
         self.sum = len(items)
         self.left_label.setText(f"全部（{self.sum}）")
-        if get_type == 'refresh':
-            self.pagination.set_sum_item(self.sum)
+        self.pagination.set_sum_item(self.sum)
 
         delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
         if len(items) > 0:
@@ -323,7 +322,7 @@ class UploadSpace(QFrame):
 
     @Slot()
     def open_upload_info(self):
-        self.info_dialog = CustomDialogModal(x=604, y=105, width=300, height=120)
+        self.info_dialog = CustomDialogModal(x=584, y=85, width=280, height=120)
         main_layout = self.info_dialog.setup_layout()
         self.info_dialog.dialog.frame.setObjectName("info_main_layout_dialog")
         self.info_dialog.dialog.setStyleSheet(
