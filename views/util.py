@@ -13,8 +13,8 @@ def images_path(app_path, path=''):
 
 
 # 将控件的鼠标样式设置为Pointer
-def view_cursor(widget: QWidget):
-    widget.setCursor(QCursor(Qt.PointingHandCursor))
+def view_cursor(widget: QWidget, cursor: QCursor = Qt.PointingHandCursor):
+    widget.setCursor(QCursor(cursor))
 
 
 # 将控件设置背景颜色

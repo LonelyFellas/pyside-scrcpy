@@ -1,10 +1,10 @@
 import os
-from typing import List
 from collections import deque
 
 from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QSizePolicy, QVBoxLayout
 
 from global_state import GlobalState
+from views.config import WIDTH_WINDOW
 from views.dialog import CustomDialogModal
 from views.empty import EmptyView
 from views.upload_progress_item import UploadProgressItem
@@ -12,7 +12,7 @@ from views.upload_progress_item import UploadProgressItem
 
 class UploadDialog(CustomDialogModal):
     def __init__(self, parent=None):
-        super().__init__(x=parent.x() + 10, y=105, width=520, height=310)
+        super().__init__(x=parent.x() + WIDTH_WINDOW + 20, y=85, width=500, height=280)
         self.application_path = GlobalState().get_root_path()
         self.main_layout = None
         self.dq_items = deque()
@@ -33,7 +33,7 @@ class UploadDialog(CustomDialogModal):
         self.title = QLabel()
         self.modify_title(len(self.dq_items), self.done_quantity)
         self.main_layout.addWidget(self.title)
-        self.empty_view = EmptyView(self.width() / 2, self.height() / 2 - 80, False, 50, 50, 14)
+        self.empty_view = EmptyView(self.width() / 2, self.height() / 2 - 140, False, 50, 50, 14)
         self.main_layout.addWidget(self.empty_view)
         self.create_list_item()
 

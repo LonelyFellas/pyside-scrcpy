@@ -3,6 +3,7 @@ from queue import Queue
 import re
 import subprocess
 from functools import partial
+from typing import Optional, Literal
 
 from PySide6.QtCore import QRect, QSize, Slot, QThread, Signal, QTimer
 from PySide6.QtGui import Qt, QIcon
@@ -23,7 +24,7 @@ from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
-    def __init__(self, parent=None, width_window=0):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.scrcpy_addr = GlobalState().get_device().serial
         self.application_path = GlobalState().get_root_path()
@@ -34,6 +35,8 @@ class UploadSpace(QFrame):
         self.items = []
         self.threads = Queue()
         self.loading = False
+        self.pageNo = 1
+        self.pageSize = 10
 
         spacer = QSpacerItem(0, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.layout = QVBoxLayout(self)
@@ -51,6 +54,8 @@ class UploadSpace(QFrame):
         # 分页
         self.pagination = PaginationWidget()
         self.pagination.set_sum_item(self.sum)
+        self.pagination.prev_signal.connect(lambda: self.page_changed('prev'))
+        self.pagination.next_signal.connect(lambda: self.page_changed('next'))
         self.layout.addWidget(self.pagination)
         self.layout.setAlignment(Qt.AlignTop)
 
@@ -134,11 +139,15 @@ class UploadSpace(QFrame):
 
     def create_files_list_view(self):
         self.files_list = QListWidget(self)
-        self.empty_view = EmptyView(self.width() - 20, 550, True, 100, 100)
+        self.empty_view = EmptyView(self.width() - 20, 450, True, 100, 100)
         self.layout.addWidget(self.files_list)
         self.files_list.hide()
         self.layout.addWidget(self.empty_view)
         self.get_list(get_type='init')
+
+    def page_changed(self, page_type: Optional[Literal['prev', 'next']]):
+        self.pageNo += (1 if page_type == 'next' else -1)
+        self.update_list('refresh')
 
     def open_file_dialog(self):
         # 获取当前用户的下载目录
@@ -202,28 +211,33 @@ class UploadSpace(QFrame):
             self.get_list('refresh')
 
     def handle_download_files(self, res_list, get_type):
+
         if res_list == '' or res_list is None:
             return []
         pattern = re.compile(r'\s(\d+)\s(\d{4}-\d{2}-\d{2} \d{2}:\d{2})\s+(/.+)$', re.MULTILINE)
         matches = pattern.findall(res_list)
         cover_path = os.path.join(self.application_path, 'images', 'flc-file-icon.png')
-        items = [{'size': self.format_size(match[0]), 'date': match[1], 'filename': match[2],
-                  'cover': cover_path} for
-                 match in matches]
+        self.items = [{'size': self.format_size(match[0]), 'date': match[1], 'filename': match[2],
+                       'cover': cover_path} for
+                      match in matches]
 
+        self.sum = len(self.items)
+        self.pagination.set_option(option={
+            'page_sum': self.sum
+        })
+        self.left_label.setText(f"全部（{self.sum}）")
+        self.pagination.set_sum_item(self.sum)
+        self.update_list(get_type)
+
+    def update_list(self, get_type=None):
+        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
         if get_type == 'refresh':
             self.files_list.clear()
-        self.sum = len(items)
-        self.left_label.setText(f"全部（{self.sum}）")
-        if get_type == 'refresh':
-            self.pagination.set_sum_item(self.sum)
-
-        delete_icon_path = os.path.join(self.application_path, 'images', 'delete.png')
-        if len(items) > 0:
+        if len(self.items) > 0:
             self.empty_view.hide()
             self.files_list.show()
         # 重新添加项
-        for item in items:
+        for item in self.items[((self.pageNo - 1) * self.pageSize): (self.pageNo * self.pageSize)]:
             item_view = QListWidgetItem(self.files_list)
             item_widget = FileItem(item_view, item, delete_icon_path)
             item_widget.remove_item_signal.connect(self.remove_item)
@@ -323,7 +337,7 @@ class UploadSpace(QFrame):
 
     @Slot()
     def open_upload_info(self):
-        self.info_dialog = CustomDialogModal(x=604, y=105, width=300, height=120)
+        self.info_dialog = CustomDialogModal(x=584, y=85, width=280, height=120)
         main_layout = self.info_dialog.setup_layout()
         self.info_dialog.dialog.frame.setObjectName("info_main_layout_dialog")
         self.info_dialog.dialog.setStyleSheet(

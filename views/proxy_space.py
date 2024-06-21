@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Optional, Literal, List
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
@@ -26,7 +27,9 @@ class ProxySpace(QFrame):
         self.token = GlobalState().get_token()
         self.env_id = GlobalState().get_env_id()
         self.application_path = GlobalState().get_root_path()
-
+        self.pageNo = 1
+        self.pageSize = 20
+        self.data = []
         self.top_layout = None
         self.bottom_layout = None
         self.done_thread = 0
@@ -53,7 +56,9 @@ class ProxySpace(QFrame):
 
         # 将表格添加到主layout里面去
         self.main_layout.addWidget(self.table)
-        self.pagination = PaginationWidget(self.application_path)
+        self.pagination = PaginationWidget(0, self.pageNo, self.pageSize, 0)
+        self.pagination.prev_signal.connect(lambda: self.page_changed('prev'))
+        self.pagination.next_signal.connect(lambda: self.page_changed('next'))
         self.main_layout.addWidget(self.pagination)
 
         container = QWidget(self)
@@ -108,6 +113,10 @@ class ProxySpace(QFrame):
         self.spin_frame = SpinFrame(self)
         self.load_data()
 
+    def page_changed(self, page_type: Optional[Literal['prev', 'next']]):
+        self.pageNo += (1 if page_type == 'next' else -1)
+        self.update_list()
+
     @Slot()
     def load_data(self):
         self.thread_env_detail = WorkerThread(token=self.token, url='env/getCurrentVpc', data={'envId': self.env_id},
@@ -128,17 +137,26 @@ class ProxySpace(QFrame):
             status_type = data['statusText'] if 'statusText' in data else '暂无'
             self.update_top_view(addr, status_type, proxy_type)
         if fetched_type == 'vpc_list':
+            self.data = data
             len_data = len(data)
-            self.table.setRowCount(len_data)
-            self.pagination.set_sum_item(len_data)
-            for index, item in enumerate(data):
-                proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
-                self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
-                self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
-                self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
+            self.pagination.set_option(option={
+                "page_sum": len_data,
+            })
+            self.update_list()
 
         if self.done_thread == 2:
             self.spin_frame.hide_spin()
+
+    def update_list(self):
+        gap = len(self.data) - (self.pageNo - 1) * self.pageSize
+        current_quantity = 20 if gap >= 20 else gap
+        self.table.setRowCount(current_quantity)
+        self.pagination.set_sum_item(current_quantity)
+        for index, item in enumerate(self.data[((self.pageNo - 1) * self.pageSize): (self.pageNo * self.pageSize)]):
+            proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
+            self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
+            self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
+            self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
 
     def update_top_view(self, addr='', status_text='', type=''):
         self.ip_label.setText(f"IP地址：{addr}")

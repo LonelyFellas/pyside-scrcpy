@@ -1,8 +1,5 @@
-from typing import Dict
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QGraphicsOpacityEffect
-import shiboken6  # 导入 shiboken6 模块
 
 from views.config import WIDTH_WINDOW, SCRCPY_WIDTH
 from views.util import img_label, view_cursor
