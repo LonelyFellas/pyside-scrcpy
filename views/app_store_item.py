@@ -1,10 +1,7 @@
-import re
 import subprocess
 
 from PySide6.QtGui import QPixmap, Qt
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QVBoxLayout, QPushButton, QSizePolicy
-
-from views.win_event import handle_startupinfo
 
 
 class AppItem(QWidget):
@@ -32,7 +29,6 @@ class AppItem(QWidget):
         text_layout.addWidget(name_label)
         text_layout.addWidget(version_label)
         layout.addLayout(text_layout)
-
 
         # Install Button
         install_button = QPushButton("安装")
@@ -102,4 +98,3 @@ class AppItem(QWidget):
     #     #     print("安装失败")
     #
     #
-

@@ -1,5 +1,4 @@
 import os
-from typing import List
 from collections import deque
 
 from PySide6.QtWidgets import QLabel, QListWidget, QListWidgetItem, QSizePolicy, QVBoxLayout

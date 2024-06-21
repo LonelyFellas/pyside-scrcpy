@@ -1,16 +1,13 @@
 from typing import Literal
 
-from PySide6 import QtGui
-from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtGui import QPixmap, QIcon
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QFrame, QPushButton
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 
 from global_state import GlobalState
-from views import handle_startupinfo, embed_window
-from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW, PROXY_WIDTH
+from views import embed_window
+from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW
 from views.control_btn_widget import ControlBtnWidget
-from views.proxy_space import ProxySpace
-from views.util import palette_bg_color, images_path, img_label, spacer_item, view_cursor
+from views.util import palette_bg_color
 
 
 class Control(QWidget):

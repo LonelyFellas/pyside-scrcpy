@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QFrame
+from PySide6.QtWidgets import QFrame
 
 
 class Divider(QFrame):
@@ -6,5 +6,3 @@ class Divider(QFrame):
         super().__init__(parent)
         self.setFixedHeight(1)
         self.setStyleSheet("background-color: #f0f0f0;")
-
-
