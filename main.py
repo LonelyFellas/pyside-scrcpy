@@ -17,6 +17,8 @@ from views.upload_space import UploadSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
 
+# import source
+
 # 获取应用程序运行目录或打包后的临时目录
 if hasattr(sys, '_MEIPASS'):
     application_path = os.path.join(sys._MEIPASS)
@@ -53,18 +55,85 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
-        self.setStyleSheet("""
-            QPushButton#outline_btn_none {
+        images_dir = os.path.join(application_path, 'images')
+        self.setStyleSheet(f"""
+            QPushButton#outline_btn_none {{
                 border: none;
                 outline: none;
-            }
-            QPushButton#outline_btn_none:hover {
+            }}
+            QPushButton#outline_btn_none:hover {{
                 background-color: #eee; 
                 border-radius: 2px;
-            }
-            QPushButton#outline_btn_none:pressed {
+            }}
+            QPushButton#outline_btn_none:pressed {{
                 background-color: #ccc;
-            }
+            }}
+            QScrollBar:vertical
+            {{
+                width:12px;
+                background:rgb(0,0,0,0%);
+                margin:0px,0px,0px,0px;
+                padding-top:12px;   /*上预留位置*/
+                padding-bottom:12px;    /*下预留位置*/
+            }}
+             
+            /*滚动条中滑块的样式*/
+            QScrollBar::handle:vertical
+            {{
+                width:12px;
+                background:rgb(0,0,0,25%);
+                border-radius:4px;
+                min-height:20px;
+            }}
+             
+            /*鼠标触及滑块样式*/
+            QScrollBar::handle:vertical:hover
+            {{
+                width:14px;
+                background:rgb(0,0,0,50%);
+                border-radius:4px;
+                min-height:20;
+            }}
+             
+            /*设置下箭头*/
+            QScrollBar::add-line:vertical
+            {{
+                height:12px;
+                width:4px;
+                subcontrol-position:bottom;
+            }}
+             
+            /*设置上箭头*/
+            QScrollBar::sub-line:vertical
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:top;
+            }}
+             
+            /*设置下箭头:悬浮状态*/
+            QScrollBar::add-line:vertical:hover
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:bottom;
+            }}
+             
+            /*设置上箭头：悬浮状态*/
+            QScrollBar::sub-line:vertical:hover
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:top;
+            }}
+             
+            /*当滚动条滚动的时候，上面的部分和下面的部分*/
+            QScrollBar::add-page:vertical,QScrollBar::sub-page:vertical
+            {{
+                background:rgb(0,0,0,10%);
+                border-radius:4px;
+            }}
+
         """)
 
     # 监听键盘的事件
@@ -310,16 +379,16 @@ def open_scrcpy() -> int:
     打开scrcpy第三方窗口
     :return: int
     """
-    # scrcpy_process = subprocess.Popen(
-    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-    #     **handle_startupinfo())
-    # time.sleep(1)
+    scrcpy_process = subprocess.Popen(
+        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+        **handle_startupinfo())
+    time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        # scrcpy_process.terminate()
+        scrcpy_process.terminate()
         exit(1)
     return hwnd
 
