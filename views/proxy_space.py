@@ -24,9 +24,9 @@ class ProxySpace(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedSize(EXPEND_WIDTH, HEIGHT_WINDOW)
-        self.token = GlobalState().get_token()
-        self.env_id = GlobalState().get_env_id()
-        self.application_path = GlobalState().get_root_path()
+        self.token = GlobalState().token
+        self.env_id = GlobalState().env_id
+        self.application_path = GlobalState().root_path
         self.pageNo = 1
         self.pageSize = 20
         self.data = []

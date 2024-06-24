@@ -37,7 +37,7 @@ def spacer_item(width=10, height=10):
 # 图片控件
 def img_label(width=0, height=0, btn_path=''):
     btn_icon = QLabel()
-    pixmap = QPixmap(images_path(GlobalState().get_root_path(), btn_path))  # 替换为你的图片路径
+    pixmap = QPixmap(images_path(GlobalState().root_path, btn_path))  # 替换为你的图片路径
     pixmap.scaled(width, height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
     btn_icon.setPixmap(pixmap)
     return btn_icon

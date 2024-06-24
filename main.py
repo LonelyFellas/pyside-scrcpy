@@ -17,8 +17,6 @@ from views.upload_space import UploadSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
 
-# import source
-
 # 获取应用程序运行目录或打包后的临时目录
 if hasattr(sys, '_MEIPASS'):
     application_path = os.path.join(sys._MEIPASS)
@@ -32,7 +30,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.scrcpy_addr = scrcpy_addr
-        self.device = GlobalState().get_device()
+        self.device = GlobalState().device
         self.buttons = []
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
@@ -273,7 +271,7 @@ class MainWindow(QMainWindow):
 
     def update_ui(self):
 
-        self.is_vertical_screen = GlobalState().get_is_vertical_screen()
+        self.is_vertical_screen = GlobalState().is_vertical_screen
         width_window = WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW
         height_window = HEIGHT_WINDOW if self.is_vertical_screen else WIDTH_WINDOW
         screen = QApplication.primaryScreen().availableGeometry()
@@ -401,13 +399,14 @@ if __name__ == "__main__":
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
     # 初始化全局状态
     global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
-    scrcpy_hwnd = open_scrcpy()
+    # scrcpy_hwnd = open_scrcpy()
+    scrcpy_hwnd = -1
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     window = MainWindow()
     window.show()
 
-    embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
+    # embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()

@@ -24,7 +24,7 @@ class PaginationWidget(QWidget):
         super().__init__()
         self.setFixedHeight(35)
         self.setContentsMargins(0, 0, 0, 0)
-        self.application_path = GlobalState().get_root_path()
+        self.application_path = GlobalState().root_path
         self.page_no = page_no
         self.page_size = page_size
         self.page_sum = page_sum
