@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.scrcpy_addr = scrcpy_addr
-        self.device = GlobalState().get_device()
+        self.device = GlobalState().device
         self.buttons = []
         self.is_vertical_screen = is_vertical_screen
         self.rotation_number = scrcpy_size_num
@@ -53,18 +53,85 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
-        self.setStyleSheet("""
-            QPushButton#outline_btn_none {
+        images_dir = os.path.join(application_path, 'images')
+        self.setStyleSheet(f"""
+            QPushButton#outline_btn_none {{
                 border: none;
                 outline: none;
-            }
-            QPushButton#outline_btn_none:hover {
+            }}
+            QPushButton#outline_btn_none:hover {{
                 background-color: #eee; 
                 border-radius: 2px;
-            }
-            QPushButton#outline_btn_none:pressed {
+            }}
+            QPushButton#outline_btn_none:pressed {{
                 background-color: #ccc;
-            }
+            }}
+            QScrollBar:vertical
+            {{
+                width:12px;
+                background:rgb(0,0,0,0%);
+                margin:0px,0px,0px,0px;
+                padding-top:12px;   /*上预留位置*/
+                padding-bottom:12px;    /*下预留位置*/
+            }}
+             
+            /*滚动条中滑块的样式*/
+            QScrollBar::handle:vertical
+            {{
+                width:12px;
+                background:rgb(0,0,0,25%);
+                border-radius:4px;
+                min-height:20px;
+            }}
+             
+            /*鼠标触及滑块样式*/
+            QScrollBar::handle:vertical:hover
+            {{
+                width:14px;
+                background:rgb(0,0,0,50%);
+                border-radius:4px;
+                min-height:20;
+            }}
+             
+            /*设置下箭头*/
+            QScrollBar::add-line:vertical
+            {{
+                height:12px;
+                width:4px;
+                subcontrol-position:bottom;
+            }}
+             
+            /*设置上箭头*/
+            QScrollBar::sub-line:vertical
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:top;
+            }}
+             
+            /*设置下箭头:悬浮状态*/
+            QScrollBar::add-line:vertical:hover
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:bottom;
+            }}
+             
+            /*设置上箭头：悬浮状态*/
+            QScrollBar::sub-line:vertical:hover
+            {{
+                height:12px;
+                width:10px;
+                subcontrol-position:top;
+            }}
+             
+            /*当滚动条滚动的时候，上面的部分和下面的部分*/
+            QScrollBar::add-page:vertical,QScrollBar::sub-page:vertical
+            {{
+                background:rgb(0,0,0,10%);
+                border-radius:4px;
+            }}
+
         """)
 
     # 监听键盘的事件
@@ -204,7 +271,7 @@ class MainWindow(QMainWindow):
 
     def update_ui(self):
 
-        self.is_vertical_screen = GlobalState().get_is_vertical_screen()
+        self.is_vertical_screen = GlobalState().is_vertical_screen
         width_window = WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW
         height_window = HEIGHT_WINDOW if self.is_vertical_screen else WIDTH_WINDOW
         screen = QApplication.primaryScreen().availableGeometry()
@@ -332,13 +399,14 @@ if __name__ == "__main__":
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
     # 初始化全局状态
     global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
-    scrcpy_hwnd = open_scrcpy()
+    # scrcpy_hwnd = open_scrcpy()
+    scrcpy_hwnd = -1
     app = QApplication([])
     app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
     window = MainWindow()
     window.show()
 
-    embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
+    # embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()

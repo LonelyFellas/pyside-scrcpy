@@ -18,7 +18,7 @@ class Control(QWidget):
     def __init__(self, win_id=0, scrcpy_hwnd=-1):
         super().__init__()
         self.layout = None
-        self.is_vertical_screen = GlobalState().get_is_vertical_screen()
+        self.is_vertical_screen = GlobalState().is_vertical_screen
         if self.is_vertical_screen:
             self.setFixedSize(
                 WIDTH_WINDOW - SCRCPY_WIDTH, HEIGHT_WINDOW)
@@ -32,7 +32,7 @@ class Control(QWidget):
             layout.setAlignment(Qt.AlignLeft)
             layout.setContentsMargins(10, 0, 10, 0)
 
-        self.device = GlobalState().get_device()
+        self.device = GlobalState().device
         palette_bg_color(self, color='#d5d8e1')
 
         btn_arr = [{
@@ -104,7 +104,7 @@ class Control(QWidget):
     def on_rotate_screen(self, win_id, scrcpy_hwnd):
         self.device.shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
 
-        rotation_num = GlobalState().get_orientation()
+        rotation_num = GlobalState().orientation
         if rotation_num == 3:
             rotation_num = 0
         else:
@@ -116,7 +116,7 @@ class Control(QWidget):
             raise RuntimeError(f"Error executing screen rotation command: {result.stderr}")
         else:
             is_vertical_screen = rotation_num == 0 or rotation_num == 2
-            GlobalState().set_orientation(rotation_num)
-            GlobalState().set_is_vertical_screen(is_vertical_screen)
+            GlobalState().orientation(rotation_num)
+            GlobalState().is_vertical_screen(is_vertical_screen)
             embed_window(win_id, scrcpy_hwnd, is_vertical_screen)
             self.rotation.emit()

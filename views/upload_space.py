@@ -26,8 +26,8 @@ from adb import AdbPushThread
 class UploadSpace(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.scrcpy_addr = GlobalState().get_device().serial
-        self.application_path = GlobalState().get_root_path()
+        self.scrcpy_addr = GlobalState().device.serial
+        self.application_path = GlobalState().root_path
         self.sum = 0
         self.setObjectName("upload_space_frame")
         self.setContentsMargins(0, 0, 0, 0)
@@ -264,7 +264,7 @@ class UploadSpace(QFrame):
 
     def get_list(self, get_type='init'):
         if self.loading is False:
-            self.get_list_thread = ListWorker(GlobalState().get_device().serial, '/sdcard/Download/', get_type)
+            self.get_list_thread = ListWorker(GlobalState().device.serial, '/sdcard/Download/', get_type)
             self.get_list_thread.list_signal.connect(self.handle_download_files)
             self.get_list_thread.finished.connect(self.get_list_finished)
             self.get_list_thread.start()

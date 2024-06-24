@@ -8,7 +8,7 @@ from views.util import images_path
 class SpinFrame(QFrame):
     def __init__(self, parent=None, width=50, height=50):
         super().__init__(parent)
-        self.application_path = GlobalState().get_root_path()
+        self.application_path = GlobalState().root_path
         self.setFixedSize(parent.size())
         self.setStyleSheet("background-color: rgba(255,255,255,0.4);")
         self._label_width = width

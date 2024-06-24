@@ -16,7 +16,7 @@ class EmptyView(QWidget):
         self.placeholder_label.setAlignment(Qt.AlignCenter)
         # 是否有loading效果
         self.loading = loading
-        pixmap = QPixmap(images_path(GlobalState().get_root_path(), 'empty.png'))  # 替换为你的图片路径
+        pixmap = QPixmap(images_path(GlobalState().root_path, 'empty.png'))  # 替换为你的图片路径
         resized_pixmap = pixmap.scaled(empty_w, empty_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
         self.placeholder_label.setPixmap(resized_pixmap)

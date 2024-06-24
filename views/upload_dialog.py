@@ -13,7 +13,7 @@ from views.upload_progress_item import UploadProgressItem
 class UploadDialog(CustomDialogModal):
     def __init__(self, parent=None):
         super().__init__(x=parent.x() + WIDTH_WINDOW + 20, y=85, width=500, height=280)
-        self.application_path = GlobalState().get_root_path()
+        self.application_path = GlobalState().root_path
         self.main_layout = None
         self.dq_items = deque()
         self.done_quantity = 0

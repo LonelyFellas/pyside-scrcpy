@@ -27,29 +27,38 @@ class GlobalState:
         self._device = device
         self._window_size = window_size
 
-    def get_device(self) -> Adbkit:
+    @property
+    def device(self) -> Adbkit:
         return self._device
 
-    def get_token(self):
+    @property
+    def token(self):
         return self._token
 
-    def get_env_id(self):
+    @property
+    def env_id(self):
         return self._env_id
 
-    def get_root_path(self):
+    @property
+    def root_path(self):
         return self._root_path
 
-    def get_window_size(self):
+    @property
+    def window_size(self):
         return self._window_size
 
-    def get_orientation(self):
+    @property
+    def orientation(self):
         return self._orientation
 
-    def set_orientation(self, orientation):
+    @orientation.setter
+    def orientation(self, orientation):
         self._orientation = orientation
 
-    def get_is_vertical_screen(self):
+    @property
+    def is_vertical_screen(self):
         return self._is_vertical_screen
 
-    def set_is_vertical_screen(self, value):
+    @is_vertical_screen.setter
+    def is_vertical_screen(self, value):
         self._is_vertical_screen = value
