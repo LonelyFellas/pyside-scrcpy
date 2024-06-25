@@ -1,11 +1,13 @@
 import os
+from typing import Tuple
 
 from PySide6 import QtGui
 from PySide6.QtCore import Qt, Signal, QObject, Property
 from PySide6.QtGui import QCursor, QPixmap
-from PySide6.QtWidgets import QWidget, QSpacerItem, QSizePolicy, QLabel
+from PySide6.QtWidgets import QWidget, QSpacerItem, QSizePolicy, QLabel, QApplication
 
 from global_state import GlobalState
+from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW
 
 
 def images_path(app_path, path=''):
@@ -59,3 +61,12 @@ class StateObject(QObject):
             self.valueChanged.emit(value)
 
     value = Property(object, get_value, set_value, notify=valueChanged)
+
+
+def get_all_size(vertical: bool, scaling_factor: float) -> Tuple[int, int, int, int]:
+    width = int(SCRCPY_WIDTH / scaling_factor)
+    height = int(HEIGHT_WINDOW / scaling_factor)
+    width_size = width if vertical else height
+    height_size = height if vertical else width
+    top = 0 if vertical else 50
+    return 0, top, width_size, height_size

@@ -1,21 +1,22 @@
-from typing import Literal, Optional
+from typing import Literal, Optional, Tuple, List
 import os
 import subprocess
 import sys
 import time
 
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QKeyEvent, QScreen
 from PySide6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
 from adb import Adbkit
 from global_state import GlobalState
 from views import find_window_by_title, embed_window, handle_startupinfo
-from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, SCRCPY_WIDTH, EXPEND_WIDTH
+from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, SCRCPY_WIDTH, EXPEND_WIDTH, REAL_WIDTH, REAL_HEIGHT, WIDTH_BUTTON
 from views.control import Control
 from views.upload_space import UploadSpace
 from views.proxy_space import ProxySpace
 from views.dialog_screen_shot import DialogScreenShot
+from views.util import get_all_size
 
 # 获取应用程序运行目录或打包后的临时目录
 if hasattr(sys, '_MEIPASS'):
@@ -41,7 +42,12 @@ class MainWindow(QMainWindow):
         self.m_layout = None
         self.left_layout = None
         self.empty_widget = None
-        self.control_widget = None
+        self.control_widget = None  # 操作栏
+        self.last_screen = None  # 记录上一次所在的显示屏
+        self.scaling_factor = 0.0  # 缩放比
+        self.width_scrcpy = 0  # scrcpy窗口的宽度
+        self.width_win = 0  # 窗口的宽度
+        self.height_win = 0  # 窗口的高度
 
         self.app_store_space = None
 
@@ -53,7 +59,6 @@ class MainWindow(QMainWindow):
         self.app_store_expend = False
         self.proxy_expend = False
         self.upload_expend = False
-        images_dir = os.path.join(application_path, 'images')
         self.setStyleSheet(f"""
             QPushButton#outline_btn_none {{
                 border: none;
@@ -240,13 +245,11 @@ class MainWindow(QMainWindow):
             print(f"未映射的键码: {keycode}")
 
     def on_screen_shop(self):
-
         dialog = DialogScreenShot(self, scrcpy_addr)
         dialog.exec()
 
     def clear_layout(self):
-        if self.is_vertical_screen:
-            print("竖屏")
+        if not self.is_vertical_screen:
             self.m_layout.removeWidget(self.empty_widget)
             self.m_layout.removeWidget(self.control_widget)
 
@@ -270,35 +273,35 @@ class MainWindow(QMainWindow):
             self.remove_item_from_layout()
 
     def update_ui(self):
-
         self.is_vertical_screen = GlobalState().is_vertical_screen
-        width_window = WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW
-        height_window = HEIGHT_WINDOW if self.is_vertical_screen else WIDTH_WINDOW
+        self.get_init_window_size()
         screen = QApplication.primaryScreen().availableGeometry()
-        x = (screen.width() - width_window) // 2
-        y = (screen.height() - height_window) // 2
+
+        x = (screen.width() - self.width_win) // 2
+        y = (screen.height() - self.height_win) // 2
 
         # 禁用最大化按钮和拉伸功能
-        self.setFixedSize(width_window, height_window)
-        self.setGeometry(x, y, width_window, height_window)
+        self.setFixedSize(self.width_win, self.height_win)
+        self.setGeometry(x, y, self.width_win, self.height_win)
 
         if not self.is_vertical_screen:  # 横屏
             self.left_layout = QVBoxLayout()
             self.left_layout.setContentsMargins(0, 0, 0, 0)
             self.left_layout.setSpacing(0)
             self.left_layout.setAlignment(Qt.AlignTop)
-
-            self.control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
+            self.control_widget = Control(win_id=self.winId(), scrcpy_hwnd=scrcpy_hwnd,
+                                          scaling_factor=self.scaling_factor, length=self.width_win)
             self.left_layout.addWidget(self.control_widget)
             self.empty_widget = QFrame()
-            self.empty_widget.setFixedSize(HEIGHT_WINDOW, SCRCPY_WIDTH)
+            self.empty_widget.setFixedSize(self.width_scrcpy, self.height_win)
             self.left_layout.addWidget(self.empty_widget)
             self.m_layout.addLayout(self.left_layout)
         else:  # 竖屏
             self.empty_widget = QFrame()
-            self.empty_widget.setFixedSize(SCRCPY_WIDTH, HEIGHT_WINDOW)
+            self.empty_widget.setFixedSize(self.width_scrcpy, self.height_win)
             self.m_layout.addWidget(self.empty_widget)
-            self.control_widget = Control(win_id=self.window().winId(), scrcpy_hwnd=scrcpy_hwnd)
+            self.control_widget = Control(win_id=self.winId(), scrcpy_hwnd=scrcpy_hwnd,
+                                          scaling_factor=self.scaling_factor, length=self.height_win)
             self.m_layout.addWidget(self.control_widget)
 
         self.m_layout.setContentsMargins(0, 0, 0, 0)
@@ -306,27 +309,45 @@ class MainWindow(QMainWindow):
         self.m_layout.setAlignment(Qt.AlignLeft)
         self.control_widget.create_sign.connect(self.expend_main_view)
         self.control_widget.screen_shop_sign.connect(self.on_screen_shop)
-        self.control_widget.rotation.connect(self.reset_window)
+        self.control_widget.rotation_sign.connect(self.reset_window)
         self.central_widget.setLayout(self.m_layout)
 
     def reset_window(self):
+        self.is_vertical_screen = GlobalState().is_vertical_screen
+        sizes = self.get_rect(QApplication.primaryScreen())
+        GlobalState().sizes = (sizes[2], sizes[3])
+        # 重新对窗口进行赋值，因为某种特殊windows特有的原因。在切换显示屏的窗口和初始化创建的窗口不同。
+        # 这边需要进一步同步窗口的大小
+        self.get_init_window_size()
+        # 投射子窗口
+        embed_window(self.winId(), scrcpy_hwnd, sizes)
         self.clear_layout()
         self.update_ui()
         self.last_expend_space = ''
 
     def is_not_expend(self):
-        return self.width() == (WIDTH_WINDOW if self.is_vertical_screen else HEIGHT_WINDOW)
+        return self.width() == (self.width_win if self.is_vertical_screen else self.height_win)
+
+    def get_init_window_size(self):
+        global_width, global_height = GlobalState().sizes
+
+        win_width = self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width
+        win_height = self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height
+        self.width_scrcpy = win_width
+        self.width_win = win_width + (WIDTH_BUTTON if self.is_vertical_screen else 0)
+        self.height_win = win_height + (0 if self.is_vertical_screen else WIDTH_BUTTON)
 
     def expend_window(self):
         if self.is_vertical_screen:
             self.setFixedSize(
-                WIDTH_WINDOW + EXPEND_WIDTH if self.is_not_expend() else WIDTH_WINDOW,
-                HEIGHT_WINDOW
+                self.width_win + EXPEND_WIDTH if self.is_not_expend() else self.width_win,
+                self.height_win
             )
         else:
+            print("expend_window")
             self.setFixedSize(
-                HEIGHT_WINDOW + EXPEND_WIDTH if self.is_not_expend() else HEIGHT_WINDOW,
-                HEIGHT_WINDOW if self.is_not_expend() else WIDTH_WINDOW
+                self.height_win + EXPEND_WIDTH if self.is_not_expend() else self.height_win,
+                self.height_win if self.is_not_expend() else self.width_win
             )
 
     def remove_widget_from_layout(self, widget_str=''):
@@ -370,6 +391,42 @@ class MainWindow(QMainWindow):
         return self.upload_space and hasattr(self.upload_space,
                                              'history_dialog') and self.upload_space.history_dialog.isVisible()
 
+    def resizeEvent(self, event):
+        # 设置缩放比
+        self.check_screen_change()
+        super().resizeEvent(event)
+
+    def moveEvent(self, event):
+        self.check_screen_change()
+        super().moveEvent(event)
+
+    def check_screen_change(self):
+        # 获取当前主屏幕信息
+        main_screen = QApplication.primaryScreen()
+        current_screen = main_screen
+        # 检查窗口当前所在的屏幕
+        for screen in QApplication.screens():
+            if screen.geometry().contains(self.geometry().center()):
+                current_screen = screen
+                break
+
+        # 如果窗口移动到了新的屏幕
+        if self.last_screen != current_screen:
+            self.last_screen = current_screen
+            sizes = self.get_rect(current_screen)
+            GlobalState().sizes = (sizes[2], sizes[3])
+            # 重新对窗口进行赋值，因为某种特殊windows特有的原因。在切换显示屏的窗口和初始化创建的窗口不同。
+            # 这边需要进一步同步窗口的大小
+            self.get_init_window_size()
+            self.setFixedSize(self.width_win, self.height_win)
+            # 投射子窗口
+            embed_window(self.winId(), scrcpy_hwnd, sizes)
+
+    def get_rect(self, main_screen: QScreen):
+        screen_dpi = main_screen.physicalDotsPerInch()
+        self.scaling_factor = screen_dpi / 96.0
+        return get_all_size(self.is_vertical_screen, self.scaling_factor)
+
 
 def open_scrcpy() -> int:
     """
@@ -377,16 +434,16 @@ def open_scrcpy() -> int:
     打开scrcpy第三方窗口
     :return: int
     """
-    # scrcpy_process = subprocess.Popen(
-    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-    #     **handle_startupinfo())
-    # time.sleep(1)
+    scrcpy_process = subprocess.Popen(
+        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+        **handle_startupinfo())
+    time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        # scrcpy_process.terminate()
+        scrcpy_process.terminate()
         exit(1)
     return hwnd
 
@@ -397,16 +454,14 @@ if __name__ == "__main__":
     device = Adbkit(scrcpy_addr)
     scrcpy_size_num = device.query_system_orientation()
     is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    # 打开scrcpy dev模式下
+    scrcpy_hwnd = open_scrcpy()
+    app = QApplication([])
+
     # 初始化全局状态
     global_state.init(token, env_id, application_path, is_vertical_screen, scrcpy_size_num, device)
-    # scrcpy_hwnd = open_scrcpy()
-    scrcpy_hwnd = -1
-    app = QApplication([])
-    app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-
     window = MainWindow()
+    # 打开窗口
     window.show()
-
-    # embed_window(window.winId(), scrcpy_hwnd, is_vertical_screen)
 
     app.exec()

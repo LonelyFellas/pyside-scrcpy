@@ -5,29 +5,30 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 
 from global_state import GlobalState
 from views import embed_window
-from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW
+from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW, REAL_WIDTH, REAL_HEIGHT, WIDTH_BUTTON
 from views.control_btn_widget import ControlBtnWidget
-from views.util import palette_bg_color
+from views.util import palette_bg_color, get_all_size
 
 
 class Control(QWidget):
     create_sign = Signal(str)
     screen_shop_sign = Signal()
-    rotation = Signal()
+    rotation_sign = Signal()
 
-    def __init__(self, win_id=0, scrcpy_hwnd=-1):
+    def __init__(self, win_id=0, scrcpy_hwnd=-1, scaling_factor=0.0, length=0):
         super().__init__()
         self.layout = None
         self.is_vertical_screen = GlobalState().is_vertical_screen
+        self.scaling_factor = scaling_factor
         if self.is_vertical_screen:
             self.setFixedSize(
-                WIDTH_WINDOW - SCRCPY_WIDTH, HEIGHT_WINDOW)
+                WIDTH_BUTTON, length)
             layout = QVBoxLayout()
             layout.setAlignment(Qt.AlignTop)
             layout.setContentsMargins(0, 10, 0, 10)
         else:
-            self.setFixedSize(HEIGHT_WINDOW,
-                              WIDTH_WINDOW - SCRCPY_WIDTH)
+            self.setFixedSize(length,
+                              WIDTH_BUTTON)
             layout = QHBoxLayout()
             layout.setAlignment(Qt.AlignLeft)
             layout.setContentsMargins(10, 0, 10, 0)
@@ -101,7 +102,7 @@ class Control(QWidget):
     def on_keyevent(self, keycode):
         self.device.shell(['input', 'keyevent', keycode])
 
-    def on_rotate_screen(self, win_id, scrcpy_hwnd):
+    def on_rotate_screen(self, win_id: int, scrcpy_hwnd: int):
         self.device.shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
 
         rotation_num = GlobalState().orientation
@@ -116,7 +117,10 @@ class Control(QWidget):
             raise RuntimeError(f"Error executing screen rotation command: {result.stderr}")
         else:
             is_vertical_screen = rotation_num == 0 or rotation_num == 2
-            GlobalState().orientation(rotation_num)
-            GlobalState().is_vertical_screen(is_vertical_screen)
-            embed_window(win_id, scrcpy_hwnd, is_vertical_screen)
-            self.rotation.emit()
+            GlobalState().orientation = rotation_num
+            GlobalState().is_vertical_screen = is_vertical_screen
+            print(f'111: {is_vertical_screen}')
+
+            # sizes = get_all_size(is_vertical_screen, self.scaling_factor)
+            # embed_window(win_id, scrcpy_hwnd, sizes)
+            self.rotation_sign.emit()
