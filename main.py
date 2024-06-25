@@ -51,7 +51,6 @@ class MainWindow(QMainWindow):
 
         self.app_store_space = None
 
-        self.get_init_window_size()
         self.setWindowTitle(scrcpy_title)
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
@@ -250,7 +249,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def clear_layout(self):
-        if self.is_vertical_screen:
+        if not self.is_vertical_screen:
             self.m_layout.removeWidget(self.empty_widget)
             self.m_layout.removeWidget(self.control_widget)
 
@@ -275,6 +274,7 @@ class MainWindow(QMainWindow):
 
     def update_ui(self):
         self.is_vertical_screen = GlobalState().is_vertical_screen
+        self.get_init_window_size()
         screen = QApplication.primaryScreen().availableGeometry()
 
         x = (screen.width() - self.width_win) // 2
@@ -289,9 +289,8 @@ class MainWindow(QMainWindow):
             self.left_layout.setContentsMargins(0, 0, 0, 0)
             self.left_layout.setSpacing(0)
             self.left_layout.setAlignment(Qt.AlignTop)
-
             self.control_widget = Control(win_id=self.winId(), scrcpy_hwnd=scrcpy_hwnd,
-                                          scaling_factor=self.scaling_factor)
+                                          scaling_factor=self.scaling_factor, length=self.width_win)
             self.left_layout.addWidget(self.control_widget)
             self.empty_widget = QFrame()
             self.empty_widget.setFixedSize(self.width_scrcpy, self.height_win)
@@ -302,7 +301,7 @@ class MainWindow(QMainWindow):
             self.empty_widget.setFixedSize(self.width_scrcpy, self.height_win)
             self.m_layout.addWidget(self.empty_widget)
             self.control_widget = Control(win_id=self.winId(), scrcpy_hwnd=scrcpy_hwnd,
-                                          scaling_factor=self.scaling_factor, height=self.height_win)
+                                          scaling_factor=self.scaling_factor, length=self.height_win)
             self.m_layout.addWidget(self.control_widget)
 
         self.m_layout.setContentsMargins(0, 0, 0, 0)
@@ -314,6 +313,14 @@ class MainWindow(QMainWindow):
         self.central_widget.setLayout(self.m_layout)
 
     def reset_window(self):
+        self.is_vertical_screen = GlobalState().is_vertical_screen
+        sizes = self.get_rect(QApplication.primaryScreen())
+        GlobalState().sizes = (sizes[2], sizes[3])
+        # 重新对窗口进行赋值，因为某种特殊windows特有的原因。在切换显示屏的窗口和初始化创建的窗口不同。
+        # 这边需要进一步同步窗口的大小
+        self.get_init_window_size()
+        # 投射子窗口
+        embed_window(self.winId(), scrcpy_hwnd, sizes)
         self.clear_layout()
         self.update_ui()
         self.last_expend_space = ''
@@ -327,9 +334,8 @@ class MainWindow(QMainWindow):
         win_width = self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width
         win_height = self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height
         self.width_scrcpy = win_width
-        height = win_height
-        self.width_win = win_width + WIDTH_BUTTON if self.is_vertical_screen else height
-        self.height_win = height + WIDTH_BUTTON if self.is_vertical_screen else win_width
+        self.width_win = win_width + (WIDTH_BUTTON if self.is_vertical_screen else 0)
+        self.height_win = win_height + (0 if self.is_vertical_screen else WIDTH_BUTTON)
 
     def expend_window(self):
         if self.is_vertical_screen:
@@ -340,8 +346,8 @@ class MainWindow(QMainWindow):
         else:
             print("expend_window")
             self.setFixedSize(
-                REAL_HEIGHT + EXPEND_WIDTH if self.is_not_expend() else REAL_HEIGHT,
-                REAL_HEIGHT if self.is_not_expend() else REAL_WIDTH
+                self.height_win + EXPEND_WIDTH if self.is_not_expend() else self.height_win,
+                self.height_win if self.is_not_expend() else self.width_win
             )
 
     def remove_widget_from_layout(self, widget_str=''):

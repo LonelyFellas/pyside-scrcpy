@@ -15,20 +15,20 @@ class Control(QWidget):
     screen_shop_sign = Signal()
     rotation_sign = Signal()
 
-    def __init__(self, win_id=0, scrcpy_hwnd=-1, scaling_factor=0.0, height=0):
+    def __init__(self, win_id=0, scrcpy_hwnd=-1, scaling_factor=0.0, length=0):
         super().__init__()
         self.layout = None
         self.is_vertical_screen = GlobalState().is_vertical_screen
         self.scaling_factor = scaling_factor
         if self.is_vertical_screen:
             self.setFixedSize(
-                WIDTH_BUTTON, height)
+                WIDTH_BUTTON, length)
             layout = QVBoxLayout()
             layout.setAlignment(Qt.AlignTop)
             layout.setContentsMargins(0, 10, 0, 10)
         else:
-            self.setFixedSize(REAL_HEIGHT,
-                              50)
+            self.setFixedSize(length,
+                              WIDTH_BUTTON)
             layout = QHBoxLayout()
             layout.setAlignment(Qt.AlignLeft)
             layout.setContentsMargins(10, 0, 10, 0)
@@ -119,6 +119,7 @@ class Control(QWidget):
             is_vertical_screen = rotation_num == 0 or rotation_num == 2
             GlobalState().orientation = rotation_num
             GlobalState().is_vertical_screen = is_vertical_screen
+            print(f'111: {is_vertical_screen}')
 
             # sizes = get_all_size(is_vertical_screen, self.scaling_factor)
             # embed_window(win_id, scrcpy_hwnd, sizes)

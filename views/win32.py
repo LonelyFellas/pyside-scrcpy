@@ -51,4 +51,5 @@ def embed_window(parent_hwnd: int, child_hwnd: int, sizes: Tuple[int, int, int, 
     win32gui.SetParent(child_hwnd, parent_hwnd)
     win32gui.SetWindowLong(child_hwnd, win32con.GWL_STYLE, win32con.WS_VISIBLE | win32con.WS_CHILD)
     monitor_scale_factor = get_monitor_scale_factor(parent_hwnd)
-    set_window_pos(child_hwnd, (0, 0, int(sizes[2] * monitor_scale_factor), int(sizes[3] * monitor_scale_factor)))
+    set_window_pos(child_hwnd,
+                   (0, sizes[1], int(sizes[2] * monitor_scale_factor), int(sizes[3] * monitor_scale_factor)))
