@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QIcon
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog
 
-from views.config import WIDTH_WINDOW
+from views.config import WIDTH_WINDOW, REAL_WIDTH
 
 
 class DialogScreenShot(QDialog):
@@ -17,7 +17,7 @@ class DialogScreenShot(QDialog):
         self.is_open_save_file_dialog = False
         self.setWindowFlag(Qt.FramelessWindowHint | Qt.Dialog)
         self.setModal(True)
-        self.setGeometry(parent.x() + WIDTH_WINDOW + 10, parent.y() + 30, 100, 196)
+        self.setGeometry(parent.x() + REAL_WIDTH + 10, parent.y() + 30, 100, 196)
 
         layout = QVBoxLayout(self)
 

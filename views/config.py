@@ -1,4 +1,4 @@
-WIDTH_WINDOW = 371  # 窗口宽度
+WIDTH_WINDOW = 381  # 窗口宽度
 HEIGHT_WINDOW = 587  # 窗口高度
 WIDTH_WINDOW_V = 722  # 横向窗口宽度
 HEIGHT_WINDOW_V = 450  # 横向窗口高度
@@ -11,5 +11,8 @@ APP_STORE_WIDTH = 450  # app_store 容器大小
 PROXY_WIDTH = 550  # 代理 容器大小
 UPLOAD_WIDTH = 550  # 上传文件 容器大小
 EXPEND_WIDTH = 540
+
+REAL_WIDTH = 391
+REAL_HEIGHT = 608
 
 API_URL = 'http://maiku.npaas.cn/s/api/'  # api地址
