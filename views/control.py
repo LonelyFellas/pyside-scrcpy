@@ -4,10 +4,9 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 
 from global_state import GlobalState
-from views import embed_window
-from views.config import SCRCPY_WIDTH, HEIGHT_WINDOW, WIDTH_WINDOW, REAL_WIDTH, REAL_HEIGHT, WIDTH_BUTTON
+from views.config import WIDTH_BUTTON
 from views.control_btn_widget import ControlBtnWidget
-from views.util import palette_bg_color, get_all_size
+from views.util import palette_bg_color
 
 
 class Control(QWidget):

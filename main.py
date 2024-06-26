@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Tuple, List
+from typing import Literal, Optional
 import os
 import subprocess
 import sys
@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QWidget, Q
 from adb import Adbkit
 from global_state import GlobalState
 from views import find_window_by_title, embed_window, handle_startupinfo
-from views.config import WIDTH_WINDOW, HEIGHT_WINDOW, SCRCPY_WIDTH, EXPEND_WIDTH, REAL_WIDTH, REAL_HEIGHT, WIDTH_BUTTON
+from views.config import EXPEND_WIDTH, WIDTH_BUTTON
 from views.control import Control
 from views.upload_space import UploadSpace
 from views.proxy_space import ProxySpace
@@ -55,6 +55,9 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
         self.m_layout = QHBoxLayout()
+        self.m_layout.setContentsMargins(0, 0, 0, 0)
+        self.m_layout.setSpacing(0)
+        self.m_layout.setAlignment(Qt.AlignLeft)
         self.update_ui()
         self.app_store_expend = False
         self.proxy_expend = False
@@ -304,9 +307,6 @@ class MainWindow(QMainWindow):
                                           scaling_factor=self.scaling_factor, length=self.height_win)
             self.m_layout.addWidget(self.control_widget)
 
-        self.m_layout.setContentsMargins(0, 0, 0, 0)
-        self.m_layout.setSpacing(0)
-        self.m_layout.setAlignment(Qt.AlignLeft)
         self.control_widget.create_sign.connect(self.expend_main_view)
         self.control_widget.screen_shop_sign.connect(self.on_screen_shop)
         self.control_widget.rotation_sign.connect(self.reset_window)
@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
         self.last_expend_space = ''
 
     def is_not_expend(self):
-        return self.width() == (self.width_win if self.is_vertical_screen else self.height_win)
+        return self.width() == self.width_win
 
     def get_init_window_size(self):
         global_width, global_height = GlobalState().sizes
@@ -345,9 +345,10 @@ class MainWindow(QMainWindow):
             )
         else:
             print("expend_window")
+            print(self.is_not_expend())
             self.setFixedSize(
-                self.height_win + EXPEND_WIDTH if self.is_not_expend() else self.height_win,
-                self.height_win if self.is_not_expend() else self.width_win
+                self.width_win + EXPEND_WIDTH if self.is_not_expend() else self.width_win,
+                self.width_win if self.is_not_expend() else self.height_win
             )
 
     def remove_widget_from_layout(self, widget_str=''):
@@ -377,10 +378,12 @@ class MainWindow(QMainWindow):
         if not self.is_not_expend():
             self.remove_item_from_layout(create_type)
             if create_type == 'proxy_space':
-                self.proxy_space = ProxySpace(self)
+                self.proxy_space = ProxySpace(self,
+                                              height=self.height_win if self.is_vertical_screen else self.width_win)
                 self.m_layout.addWidget(self.proxy_space)
             else:
-                self.upload_space = UploadSpace(self)
+                self.upload_space = UploadSpace(self,
+                                                height=self.height_win if self.is_vertical_screen else self.width_win)
                 self.m_layout.addWidget(self.upload_space)
             self.last_expend_space = create_type
             return
@@ -399,6 +402,27 @@ class MainWindow(QMainWindow):
     def moveEvent(self, event):
         self.check_screen_change()
         super().moveEvent(event)
+        # 检查窗口位置是否超出屏幕
+        self.ensure_window_within_screen()
+
+    def ensure_window_within_screen(self):
+        """
+        检查窗口是否上下位置超出了屏幕
+        :return:
+        """
+        # 初始化当前屏幕
+        current_screen = QApplication.primaryScreen()
+        # 获取窗口的几何信息
+        window_rect = self.geometry()
+
+        # 获取当前屏幕的几何信息
+        screen_rect = current_screen.geometry()
+
+        # 调整窗口位置，确保它在垂直方向上在屏幕内
+        if window_rect.top() < screen_rect.top():
+            self.move(window_rect.left(), screen_rect.top())
+        elif window_rect.bottom() > screen_rect.bottom():
+            self.move(window_rect.left(), screen_rect.bottom() - window_rect.height())
 
     def check_screen_change(self):
         # 获取当前主屏幕信息
@@ -434,16 +458,16 @@ def open_scrcpy() -> int:
     打开scrcpy第三方窗口
     :return: int
     """
-    scrcpy_process = subprocess.Popen(
-        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-        **handle_startupinfo())
-    time.sleep(1)
+    # scrcpy_process = subprocess.Popen(
+    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+    #     **handle_startupinfo())
+    # time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        scrcpy_process.terminate()
+        # scrcpy_process.terminate()
         exit(1)
     return hwnd
 

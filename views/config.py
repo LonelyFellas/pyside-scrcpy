@@ -12,7 +12,4 @@ PROXY_WIDTH = 550  # 代理 容器大小
 UPLOAD_WIDTH = 550  # 上传文件 容器大小
 EXPEND_WIDTH = 540
 
-REAL_WIDTH = 391
-REAL_HEIGHT = 608
-
 API_URL = 'http://maiku.npaas.cn/s/api/'  # api地址

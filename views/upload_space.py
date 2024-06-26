@@ -24,14 +24,14 @@ from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, height=0):
         super().__init__(parent)
         self.scrcpy_addr = GlobalState().device.serial
         self.application_path = GlobalState().root_path
         self.sum = 0
         self.setObjectName("upload_space_frame")
         self.setContentsMargins(0, 0, 0, 0)
-        self.setFixedSize(EXPEND_WIDTH, HEIGHT_WINDOW)
+        self.setFixedSize(EXPEND_WIDTH, height)
         self.items = []
         self.threads = Queue()
         self.loading = False
@@ -139,7 +139,7 @@ class UploadSpace(QFrame):
 
     def create_files_list_view(self):
         self.files_list = QListWidget(self)
-        self.empty_view = EmptyView(self.width() - 20, 450, True, 100, 100)
+        self.empty_view = EmptyView(self.width() - 20, 460, True, 100, 100)
         self.layout.addWidget(self.files_list)
         self.files_list.hide()
         self.layout.addWidget(self.empty_view)
