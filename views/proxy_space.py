@@ -21,9 +21,9 @@ PROXY_MAPPING = {
 
 
 class ProxySpace(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, height=0):
         super().__init__(parent)
-        self.setFixedSize(EXPEND_WIDTH, HEIGHT_WINDOW)
+        self.setFixedSize(EXPEND_WIDTH, height)
         self.token = GlobalState().token
         self.env_id = GlobalState().env_id
         self.application_path = GlobalState().root_path
@@ -49,7 +49,7 @@ class ProxySpace(QFrame):
         # Table
         self.table = QTableWidget(0, 3)
         self.table.setContentsMargins(0, 0, 0, 0)
-        self.table.setFixedSize(520, 493)
+        self.table.setFixedSize(520, 513)
 
         self.table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
