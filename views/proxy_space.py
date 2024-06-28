@@ -1,12 +1,11 @@
 from functools import partial
-from typing import Optional, Literal, List
+from typing import Optional, Literal
 
-from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
     QHeaderView, QVBoxLayout
 
 from global_state import GlobalState
-from views.config import EXPEND_WIDTH, HEIGHT_WINDOW
+from views.config import EXPEND_WIDTH
 from views.confirm_msg_box import ConfirmationParams, ConfirmMsgBox
 from views.pagination_widget import PaginationWidget
 from views.spin_label import SpinFrame
