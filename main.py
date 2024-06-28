@@ -276,8 +276,6 @@ class MainWindow(QMainWindow):
             self.remove_item_from_layout()
 
     def update_ui(self):
-        print(self.devicePixelRatioF())
-        print(self.devicePixelRatioF())
         self.is_vertical_screen = GlobalState().is_vertical_screen
         self.get_init_window_size()
         screen = QApplication.primaryScreen().availableGeometry()
@@ -333,8 +331,8 @@ class MainWindow(QMainWindow):
     def get_init_window_size(self):
         global_width, global_height = GlobalState().sizes
 
-        win_width = self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width
-        win_height = self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height
+        win_width = int(self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width)
+        win_height = int(self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height)
         self.width_scrcpy = win_width
         self.width_win = win_width + (WIDTH_BUTTON if self.is_vertical_screen else 0)
         self.height_win = win_height + (0 if self.is_vertical_screen else WIDTH_BUTTON)
@@ -451,11 +449,15 @@ class MainWindow(QMainWindow):
         self.scaling_factor = screen_dpi / 96.0
         sizes = get_all_size(self.is_vertical_screen, self.scaling_factor)
         scale = sizes[2] / sizes[3]
+        real_width = main_screen.geometry().height()
         real_height = main_screen.geometry().height()
         # 处理2k，4k的窗口太小的问题
-        if sizes[3] / real_height > 0.3:
-            sizes[3] = real_height * 0.5
+        if sizes[3] / real_height > 0.3 and self.is_vertical_screen:
+            sizes[3] = real_height * 0.4
             sizes[2] = sizes[3] * scale
+        if sizes[2] / real_width > 0.3 and not self.is_vertical_screen:
+            sizes[2] = real_width * 0.4
+            sizes[3] = sizes[2] / scale
         return sizes
 
 

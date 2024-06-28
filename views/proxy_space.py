@@ -48,7 +48,7 @@ class ProxySpace(QFrame):
         # Table
         self.table = QTableWidget(0, 3)
         self.table.setContentsMargins(0, 0, 0, 0)
-        self.table.setFixedSize(520, 513)
+        self.table.setFixedSize(520, height - 95)
 
         self.table.setHorizontalHeaderLabels(["代理信息", "代理账号", "操作"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
