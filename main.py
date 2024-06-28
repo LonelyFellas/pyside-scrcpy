@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
             print(f"未映射的键码: {keycode}")
 
     def on_screen_shop(self):
-        dialog = DialogScreenShot(self, scrcpy_addr)
+        dialog = DialogScreenShot(self, scrcpy_addr, width=self.width_win)
         dialog.exec()
 
     def clear_layout(self):
@@ -452,10 +452,10 @@ class MainWindow(QMainWindow):
         real_width = main_screen.geometry().height()
         real_height = main_screen.geometry().height()
         # 处理2k，4k的窗口太小的问题
-        if sizes[3] / real_height > 0.3 and self.is_vertical_screen:
+        if sizes[3] / real_height <= 0.25 and self.is_vertical_screen:
             sizes[3] = real_height * 0.4
             sizes[2] = sizes[3] * scale
-        if sizes[2] / real_width > 0.3 and not self.is_vertical_screen:
+        if sizes[2] / real_width <= 0.25 and not self.is_vertical_screen:
             sizes[2] = real_width * 0.4
             sizes[3] = sizes[2] / scale
         return sizes
