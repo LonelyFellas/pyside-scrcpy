@@ -452,6 +452,7 @@ class MainWindow(QMainWindow):
         sizes = get_all_size(self.is_vertical_screen, self.scaling_factor)
         scale = sizes[2] / sizes[3]
         real_height = main_screen.geometry().height()
+        # 处理2k，4k的窗口太小的问题
         if sizes[3] / real_height > 0.3:
             sizes[3] = real_height * 0.5
             sizes[2] = sizes[3] * scale
