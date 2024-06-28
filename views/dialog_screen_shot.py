@@ -9,15 +9,15 @@ from views.config import WIDTH_WINDOW
 
 
 class DialogScreenShot(QDialog):
-    def __init__(self, parent=None, scrcpy_addr=None):
+    def __init__(self, parent=None, scrcpy_addr=None, width=WIDTH_WINDOW):
         super().__init__(parent)
         self.pic_name = f'scrrenshot_{datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.png'
         self.scrcpy_addr = scrcpy_addr
         self.adb_capture_screen_shot()
         self.is_open_save_file_dialog = False
-        self.setWindowFlag(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setWindowFlag(Qt.FramelessWindowHint)
         self.setModal(True)
-        self.setGeometry(parent.x() + WIDTH_WINDOW + 10, parent.y() + 30, 100, 196)
+        self.setGeometry(parent.x() + width + 10, parent.y() + 30, 100, 196)
 
         layout = QVBoxLayout(self)
 

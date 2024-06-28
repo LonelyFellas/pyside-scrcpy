@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import win32gui
 import win32con
@@ -47,7 +47,7 @@ def set_window_pos(child_hwnd: int, sizes: Tuple[int, int, int, int]):
                           win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
 
 
-def embed_window(parent_hwnd: int, child_hwnd: int, sizes: Tuple[int, int, int, int]):
+def embed_window(parent_hwnd: int, child_hwnd: int, sizes: List[int]):
     win32gui.SetParent(child_hwnd, parent_hwnd)
     win32gui.SetWindowLong(child_hwnd, win32con.GWL_STYLE, win32con.WS_VISIBLE | win32con.WS_CHILD)
     monitor_scale_factor = get_monitor_scale_factor(parent_hwnd)

@@ -50,7 +50,7 @@ class UploadSpace(QFrame):
         self.create_main_header_view()
         self.layout.addItem(spacer)
         # 列表
-        self.create_files_list_view()
+        self.create_files_list_view(height)
         # 分页
         self.pagination = PaginationWidget()
         self.pagination.set_sum_item(self.sum)
@@ -137,9 +137,9 @@ class UploadSpace(QFrame):
         header_layout.addLayout(header_right_layout)
         self.layout.addLayout(header_layout)
 
-    def create_files_list_view(self):
+    def create_files_list_view(self, height: int):
         self.files_list = QListWidget(self)
-        self.empty_view = EmptyView(self.width() - 20, 460, True, 100, 100)
+        self.empty_view = EmptyView(self.width() - 20, height - 80, True, 100, 100)
         self.layout.addWidget(self.files_list)
         self.files_list.hide()
         self.layout.addWidget(self.empty_view)

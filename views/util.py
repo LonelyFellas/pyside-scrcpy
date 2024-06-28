@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Tuple, List
 
 from PySide6 import QtGui
 from PySide6.QtCore import Qt, Signal, QObject, Property
@@ -63,10 +63,10 @@ class StateObject(QObject):
     value = Property(object, get_value, set_value, notify=valueChanged)
 
 
-def get_all_size(vertical: bool, scaling_factor: float) -> Tuple[int, int, int, int]:
+def get_all_size(vertical: bool, scaling_factor: float) -> List[int]:
     width = int(SCRCPY_WIDTH / scaling_factor)
     height = int(HEIGHT_WINDOW / scaling_factor)
     width_size = width if vertical else height
     height_size = height if vertical else width
     top = 0 if vertical else 50
-    return 0, top, width_size, height_size
+    return [0, top, width_size, height_size]

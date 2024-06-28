@@ -4,7 +4,7 @@ import subprocess
 import sys
 import time
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, QCoreApplication
 from PySide6.QtGui import QKeyEvent, QScreen
 from PySide6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
             print(f"未映射的键码: {keycode}")
 
     def on_screen_shop(self):
-        dialog = DialogScreenShot(self, scrcpy_addr)
+        dialog = DialogScreenShot(self, scrcpy_addr, width=self.width_win)
         dialog.exec()
 
     def clear_layout(self):
@@ -331,8 +331,8 @@ class MainWindow(QMainWindow):
     def get_init_window_size(self):
         global_width, global_height = GlobalState().sizes
 
-        win_width = self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width
-        win_height = self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height
+        win_width = int(self.get_rect(QApplication.primaryScreen())[2] if global_width == 0 else global_width)
+        win_height = int(self.get_rect(QApplication.primaryScreen())[3] if global_height == 0 else global_height)
         self.width_scrcpy = win_width
         self.width_win = win_width + (WIDTH_BUTTON if self.is_vertical_screen else 0)
         self.height_win = win_height + (0 if self.is_vertical_screen else WIDTH_BUTTON)
@@ -344,8 +344,6 @@ class MainWindow(QMainWindow):
                 self.height_win
             )
         else:
-            print("expend_window")
-            print(self.is_not_expend())
             self.setFixedSize(
                 self.width_win + EXPEND_WIDTH if self.is_not_expend() else self.width_win,
                 self.width_win if self.is_not_expend() else self.height_win
@@ -370,7 +368,6 @@ class MainWindow(QMainWindow):
                 widget.hide()
                 setattr(self, space_str, None)
 
-    @Slot(str)
     def expend_main_view(self, create_type: Literal['proxy_space', 'upload_space']):
         if self.last_expend_space == '' or self.last_expend_space == create_type:
             self.expend_window()
@@ -438,6 +435,7 @@ class MainWindow(QMainWindow):
         if self.last_screen != current_screen:
             self.last_screen = current_screen
             sizes = self.get_rect(current_screen)
+
             GlobalState().sizes = (sizes[2], sizes[3])
             # 重新对窗口进行赋值，因为某种特殊windows特有的原因。在切换显示屏的窗口和初始化创建的窗口不同。
             # 这边需要进一步同步窗口的大小
@@ -449,7 +447,18 @@ class MainWindow(QMainWindow):
     def get_rect(self, main_screen: QScreen):
         screen_dpi = main_screen.physicalDotsPerInch()
         self.scaling_factor = screen_dpi / 96.0
-        return get_all_size(self.is_vertical_screen, self.scaling_factor)
+        sizes = get_all_size(self.is_vertical_screen, self.scaling_factor)
+        scale = sizes[2] / sizes[3]
+        real_width = main_screen.geometry().height()
+        real_height = main_screen.geometry().height()
+        # 处理2k，4k的窗口太小的问题
+        if sizes[3] / real_height <= 0.25 and self.is_vertical_screen:
+            sizes[3] = real_height * 0.4
+            sizes[2] = sizes[3] * scale
+        if sizes[2] / real_width <= 0.25 and not self.is_vertical_screen:
+            sizes[2] = real_width * 0.4
+            sizes[3] = sizes[2] / scale
+        return sizes
 
 
 def open_scrcpy() -> int:
@@ -473,6 +482,12 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
+    # 启用高 DPI 支持
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    # 设置高 DPI 感知属性
+    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
     _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
     global_state = GlobalState()
     device = Adbkit(scrcpy_addr)

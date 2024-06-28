@@ -118,7 +118,6 @@ class Control(QWidget):
             is_vertical_screen = rotation_num == 0 or rotation_num == 2
             GlobalState().orientation = rotation_num
             GlobalState().is_vertical_screen = is_vertical_screen
-            print(f'111: {is_vertical_screen}')
 
             # sizes = get_all_size(is_vertical_screen, self.scaling_factor)
             # embed_window(win_id, scrcpy_hwnd, sizes)
