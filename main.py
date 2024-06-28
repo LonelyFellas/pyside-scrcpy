@@ -4,7 +4,7 @@ import subprocess
 import sys
 import time
 
-from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent, QScreen
 from PySide6.QtWidgets import QMainWindow, QApplication, QVBoxLayout, QWidget, QHBoxLayout, QFrame
 
@@ -482,12 +482,6 @@ def open_scrcpy() -> int:
 
 
 if __name__ == "__main__":
-    # 启用高 DPI 支持
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    # 设置高 DPI 感知属性
-    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-    QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
     _, scrcpy_title, scrcpy_addr, token, env_id = sys.argv
     global_state = GlobalState()
     device = Adbkit(scrcpy_addr)
