@@ -11,7 +11,7 @@ from views.config import WIDTH_WINDOW
 class DialogScreenShot(QDialog):
     def __init__(self, parent=None, scrcpy_addr=None):
         super().__init__(parent)
-        self.pic_name = f'scrrenshot_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}.png'
+        self.pic_name = f'scrrenshot_{datetime.now().strftime("%Y_%m_%d_%H_%M_%S")}.png'
         self.scrcpy_addr = scrcpy_addr
         self.adb_capture_screen_shot()
         self.is_open_save_file_dialog = False
