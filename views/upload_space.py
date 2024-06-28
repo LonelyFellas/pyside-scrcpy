@@ -382,7 +382,7 @@ class ListWorker(QThread):
 
     def run(self):
         process = subprocess.Popen(
-            f'adb -s {self.serial} shell find {self.list_path} -type f -exec ls -l {'{}'} \\;',
+            f'adb -s {self.serial} shell find {self.list_path} -type f -exec ls -l {"{}"} \\;',
             **handle_startupinfo())
         stdout, stderr = process.communicate()
         # 打印输出

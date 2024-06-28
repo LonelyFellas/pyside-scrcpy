@@ -8,7 +8,7 @@ from views.config import API_URL
 
 
 class WorkerThread(QThread):
-    data_fetched = Signal(object, QThread)  # 定义一个信号，用于传递获取的数据
+    data_fetched = Signal(object, object)  # 定义一个信号，用于传递获取的数据
 
     def __init__(self, token, url, data='', option=None):
         super().__init__()

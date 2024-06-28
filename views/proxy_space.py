@@ -1,12 +1,11 @@
 from functools import partial
-from typing import Optional, Literal, List
+from typing import Optional, Literal
 
-from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFrame, QPushButton, QWidget, QHBoxLayout, QLabel, QTableWidget, \
     QHeaderView, QVBoxLayout
 
 from global_state import GlobalState
-from views.config import EXPEND_WIDTH, HEIGHT_WINDOW
+from views.config import EXPEND_WIDTH
 from views.confirm_msg_box import ConfirmationParams, ConfirmMsgBox
 from views.pagination_widget import PaginationWidget
 from views.spin_label import SpinFrame
@@ -117,7 +116,6 @@ class ProxySpace(QFrame):
         self.pageNo += (1 if page_type == 'next' else -1)
         self.update_list()
 
-    @Slot()
     def load_data(self):
         self.thread_env_detail = WorkerThread(token=self.token, url='env/getCurrentVpc', data={'envId': self.env_id},
                                               option={"method": 'post'})
@@ -127,7 +125,6 @@ class ProxySpace(QFrame):
         self.thread_vpc_list.start()
         self.thread_env_detail.start()
 
-    @Slot(object, str)
     def on_data_fetched(self, data, fetched_type):
         self.done_thread += 1
 
@@ -153,7 +150,7 @@ class ProxySpace(QFrame):
         self.table.setRowCount(current_quantity)
         self.pagination.set_sum_item(current_quantity)
         for index, item in enumerate(self.data[((self.pageNo - 1) * self.pageSize): (self.pageNo * self.pageSize)]):
-            proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
+            proxy_info = f'{PROXY_MAPPING.get(item["type"])}://{item["address"]}:{item["port"]}'
             self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
             self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
             self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
@@ -190,7 +187,6 @@ class ProxySpace(QFrame):
         self.top_layout.addWidget(self.clear_button)
         self.main_layout.addLayout(self.top_layout)
 
-    @Slot()
     def handle_clear_proxy(self):
         button_position = self.clear_button.mapToGlobal(self.clear_button.rect().center())
         message_box = ConfirmMsgBox(self,
@@ -199,7 +195,6 @@ class ProxySpace(QFrame):
                                                        text="你确定是否清除当前代理"))
         message_box.exec_()
 
-    @Slot()
     def handle_clear_proxy_yes(self):
         self.spin_frame.show_spin()
         self.thread_clear_proxy = WorkerThread(token=self.token, url='env/clearVpc', data={'envId': self.env_id},
@@ -207,14 +202,12 @@ class ProxySpace(QFrame):
         self.thread_clear_proxy.data_fetched.connect(self.refresh_env_detail)
         self.thread_clear_proxy.start()
 
-    @Slot()
     def refresh_env_detail(self):
         self.thread_env_detail = WorkerThread(token=self.token, url='env/getCurrentVpc', data={'envId': self.env_id},
                                               option={"method": 'post'})
         self.thread_env_detail.data_fetched.connect(self.refreshed_env_detail)
         self.thread_env_detail.start()
 
-    @Slot()
     def refreshed_env_detail(self, data):
         addr = data['addr'] if 'addr' in data else '暂无'
         proxy_type = PROXY_MAPPING.get(data['type']) if 'type' in data else '暂无'
@@ -222,7 +215,6 @@ class ProxySpace(QFrame):
         self.update_top_view(addr, status_type, proxy_type)
         self.spin_frame.hide_spin()
 
-    @Slot()
     def handle_clear_proxy_no(self):
         print("No clicked!")
 
@@ -247,7 +239,6 @@ class ProxySpace(QFrame):
         widget.setLayout(layout)
         return widget
 
-    @Slot()
     def handle_switch_proxy_btn(self, vpc_id):
         self.spin_frame.show_spin()
         self.thread_switch_proxy = WorkerThread(token=self.token, url='env/setVpc', data={
@@ -258,7 +249,6 @@ class ProxySpace(QFrame):
         self.thread_switch_proxy.data_fetched.connect(self.refresh_env_detail)
         self.thread_switch_proxy.start()
 
-    @Slot()
     def handle_delete_proxy_btn(self, vpc_id, delete_btn: QPushButton):
         button_position = delete_btn.mapToGlobal(delete_btn.rect().center())
         message_box = ConfirmMsgBox(self,
@@ -268,7 +258,6 @@ class ProxySpace(QFrame):
                                                        text="你确定是否删除代理"))
         message_box.exec_()
 
-    @Slot()
     def handle_delete_proxy_yes(self, vpc_id):
         self.spin_frame.show_spin()
         self.thread_delete_vpc_list = WorkerThread(token=self.token, url='vpc/delete', data={"id": vpc_id},
@@ -276,20 +265,18 @@ class ProxySpace(QFrame):
         self.thread_delete_vpc_list.data_fetched.connect(self.refresh_vpc_list)
         self.thread_delete_vpc_list.start()
 
-    @Slot()
     def refresh_vpc_list(self):
         self.spin_frame.show_spin()
         self.thread_vpc_list = WorkerThread(token=self.token, url='vpc/getAll')
         self.thread_vpc_list.data_fetched.connect(self.refreshed_vpc_list)
         self.thread_vpc_list.start()
 
-    @Slot()
     def refreshed_vpc_list(self, data):
         self.table.setRowCount(len(data))
         self.table.setColumnCount(3)
         self.pagination.set_sum_item(len(data))
         for index, item in enumerate(data):
-            proxy_info = f'{PROXY_MAPPING.get(item['type'])}://{item['address']}:{item['port']}'
+            proxy_info = f'{PROXY_MAPPING.get(item["type"])}://{item["address"]}:{item["port"]}'
             self.table.setCellWidget(index, 0, self.create_cell_widget(QLabel(proxy_info)))
             self.table.setCellWidget(index, 1, self.create_cell_widget(QLabel(item['username'])))
             self.table.setCellWidget(index, 2, self.create_operations_widget(item['id']))
