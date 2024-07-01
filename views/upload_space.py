@@ -1,28 +1,12 @@
-import os
 from queue import Queue
-import re
-import subprocess
-from functools import partial
-from typing import Optional, Literal
-
-from PySide6.QtCore import QRect, QSize, Slot, QThread, Signal, QTimer
-from PySide6.QtGui import Qt, QIcon, QCursor
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QFileDialog, \
-    QListWidget, QListWidgetItem, QSpacerItem, QRadioButton, QButtonGroup
+from PySide6.QtGui import Qt, QCursor
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QRadioButton, QButtonGroup
 
 from global_state import GlobalState
-from views import handle_startupinfo
-from views.config import UPLOAD_WIDTH, EXPEND_WIDTH, HEIGHT_WINDOW
-from views.confirm_msg_box import ConfirmMsgBox, ConfirmationParams
-from views.dialog import CustomDialogModal
-from views.empty import EmptyView
-from views.pagination_widget import PaginationWidget
-from views.upload_file_item import FileItem
+from views.config import EXPEND_WIDTH
+
 from views.upload_local_space import UploadLocalSpace
 from views.upload_trans_space import UploadTransSpace
-from views.util import images_path
-from views.upload_dialog import UploadDialog
-from adb import AdbPushThread
 
 
 class UploadSpace(QFrame):
