@@ -59,9 +59,6 @@ class MainWindow(QMainWindow):
         self.m_layout.setSpacing(0)
         self.m_layout.setAlignment(Qt.AlignLeft)
         self.update_ui()
-        self.app_store_expend = False
-        self.proxy_expend = False
-        self.upload_expend = False
         self.setStyleSheet(f"""
             QPushButton#outline_btn_none {{
                 border: none;
@@ -141,6 +138,7 @@ class MainWindow(QMainWindow):
             }}
 
         """)
+        self.expend_main_view('upload_space')
 
     # 监听键盘的事件
     def keyPressEvent(self, event: QKeyEvent):
@@ -393,11 +391,11 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         # 设置缩放比
-        self.check_screen_change()
+        # self.check_screen_change()
         super().resizeEvent(event)
 
     def moveEvent(self, event):
-        self.check_screen_change()
+        # self.check_screen_change()
         super().moveEvent(event)
         # 检查窗口位置是否超出屏幕
         self.ensure_window_within_screen()
@@ -442,7 +440,7 @@ class MainWindow(QMainWindow):
             self.get_init_window_size()
             self.setFixedSize(self.width_win, self.height_win)
             # 投射子窗口
-            embed_window(self.winId(), scrcpy_hwnd, sizes)
+            # embed_window(self.winId(), scrcpy_hwnd, sizes)
 
     def get_rect(self, main_screen: QScreen):
         screen_dpi = main_screen.physicalDotsPerInch()
@@ -467,16 +465,16 @@ def open_scrcpy() -> int:
     打开scrcpy第三方窗口
     :return: int
     """
-    scrcpy_process = subprocess.Popen(
-        ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
-        **handle_startupinfo())
-    time.sleep(1)
+    # scrcpy_process = subprocess.Popen(
+    #     ['scrcpy', '-s', scrcpy_addr, '--window-width', '1', '--window-height', '1', '--max-size', '1080'],
+    #     **handle_startupinfo())
+    # time.sleep(1)
 
     try:
         hwnd = find_window_by_title(title=scrcpy_title)
     except Exception as e:
         print(f'Error: {e}')
-        scrcpy_process.terminate()
+        # scrcpy_process.terminate()
         exit(1)
     return hwnd
 
@@ -486,9 +484,11 @@ if __name__ == "__main__":
     global_state = GlobalState()
     device = Adbkit(scrcpy_addr)
     scrcpy_size_num = device.query_system_orientation()
-    is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    # is_vertical_screen = scrcpy_size_num == 0 or scrcpy_size_num == 2
+    is_vertical_screen = 1
     # 打开scrcpy dev模式下
-    scrcpy_hwnd = open_scrcpy()
+    # scrcpy_hwnd = open_scrcpy()
+    scrcpy_hwnd = -1
     app = QApplication([])
 
     # 初始化全局状态
