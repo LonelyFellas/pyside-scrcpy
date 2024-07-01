@@ -20,9 +20,10 @@ jobs:
       with:
         python-version: '3.8'
 
-    - name: Install Qt
+    - name: Download and Install Qt
       run: |
-        choco install qt --version=6.2.4
+        curl -Lo qt-installer.exe https://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-4.4.1-online.exe
+        qt-installer.exe --script qt-installer-noninteractive.qs
 
     - name: Install dependencies
       run: |
