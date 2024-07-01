@@ -2,10 +2,10 @@ import os
 import re
 import subprocess
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 
 import requests
-from PySide6.QtCore import Qt, QTimer, QThread, Signal
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QIcon
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QFileDialog
 
