@@ -1,4 +1,4 @@
-name: Build and Test PySide6 Project
+name: Build And Run PySide6 Project
 
 on:
   push:
@@ -19,14 +19,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-
-    - name: Download Qt Installer
-      run: |
-        curl -Lo qt-installer.exe https://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-4.4.1-online.exe
-
-    - name: Install Qt
-      run: |
-        Start-Process -FilePath .\qt-installer.exe -ArgumentList '--script', 'qt-installer-noninteractive.qs' -NoNewWindow -Wait
 
     - name: Install dependencies
       run: |
